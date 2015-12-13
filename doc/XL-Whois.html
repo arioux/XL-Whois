@@ -1,0 +1,181 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<!--
+# Copyright (C) 2015  Alain Rioux (le-tools.com)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<head>
+<title>XL-Whois</title>
+<link rel="stylesheet" type="text/css" href="../Style.css">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+
+<table border=0 cellspacing=0 cellpadding=0>
+<tr>
+<td width="80px" align="center" rowspan=2><img src="XL-Whois48.png" alt="Logo" width="48" height="48" border="0"></td>
+<td align="left" valign="center" style="color:#000066; font-size: 100%; font-weight: bold;">XL-Whois<br>Copyright (c) 2015 Alain Rioux<br></td></tr>
+<tr><td align="left" style="color:#000066; font-size: 90%;">See <a href="#Credits">Credits</a> about the logo</td></tr>
+</table><br>
+
+
+<h2><a name="WhatIsIt">What is it</a></h2>
+<ul>
+<li>XL-Whois is a tool to make multiple advanced whois requests;</li>
+<li>It supports Domain Whois, Network Whois and DNS Records;</li>
+<li>Object for the requests are parsed from the clipboard content so time to prepare 
+the request is reduced to minimum;</li>
+<li>Supported objects are IPv4, hostname, domain name and IPv6. Domain extensions 
+for hostname and domain name are validated from a common database that can be 
+updated every time you use the tool;</li>
+<li>XL-Whois stores responses from Network Whois requests in database and cache. 
+The database can be imported and exported so you can share your data between 
+your computer or with other people;</li>
+<li>XL-Whois can also log your request that you can comment and those logs are 
+stored in a database;</li>
+<li>Before making a request, XL-Whois verifies your databases and informs you if 
+you already made the same request and the result you got;</li>
+<li>Network Whois Database can be viewed, searched, filtered, analysed and even 
+data from other Network Whois report obtained by any other tool can be parsed 
+and added to your database;</li>
+</ul>
+<p>See documentation for more details.</p>
+<img src="XL-WhoisMainWindow.png" alt="Xl-Whois Main Window" width="512" height="327" border="0">
+
+
+<h2><a name="HowItWorks">How it works</a></h2>
+<p>XL-Whois doesn't require any installation. In order to start using it, just 
+run the executable file. </p>
+
+
+<h2><a name="WhatDoYouNeed">What do you need</a></h2>
+<ul>
+<li>Windows XP or newer</li>
+</ul>
+
+
+<h2><a name="VersionsHistory">Versions History</a></h2>
+<table border=1 cellspacing=0 cellpadding=2>
+<tr>
+<td align="center" style="font-weight: bold;">Version</td>
+<td align="center" style="font-weight: bold;">Comments</td>
+</tr>
+<tr>
+<td align="center">1.0 Beta</td>
+<td>First release.</td>
+</tr>
+</table><br>
+
+
+<h2><a name="Translation">Translation</a></h2>
+<h3>To translate XL-Whois to other languages:</h3>
+<ol>
+<li>In <strong>Config</strong> Window, use the <strong>Export Lang.ini</strong> 
+function. The file will be saved in the same directory of the tool;</li>
+<li>Open the file in any text editor like Notepad;</li>
+<li>Translate each expression at the right of the <strong>=</strong> symbol;</li>
+<ul>
+<li>The expression on the left side is used by the tool to identify the expression 
+so do not change it. Also, be sure to have a space between the <strong>=</strong> symbol 
+and your expression (ex. Key = Value);</li>
+<li>Authorized characters are alphanumerics, spaces and these symbols: ",", ".", "-", 
+"!", ",", "(" and ")". Any other character will be deleted;</li>
+<li>For some controls, string length must be the same as original. A longer string could 
+be truncated if it doesn't match the length of the field;</li>
+<li>The value associated with the <strong>translatorName</strong> will be used in 
+the <strong>About</strong> window to identify you as translator (if you want). You can 
+also add your email or a short url (ex. YourName (youraddress@email.com));</li>
+</ul>
+<li>Restart the tool so the strings in <strong>Lang.ini</strong> will be used 
+instead of the default language.</li>
+</ol>
+<p>If you translate the tool and you want to share, contact the author.</p>
+<h3>Available translations:</h3>
+<p>To install, save the appropriate <strong>Lang.ini</strong> file in the same 
+directory of the tool.</p>
+<p>No translation available for the moment.</p>
+
+
+<h2><a name="License">License</a></h2>
+<p>Copyright (C) 2015  Alain Rioux</p>
+<p>This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.</p>
+<p>This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.</p>
+<p>You should have received a copy of the GNU General Public License
+along with this program.  If not, see <a href="http://www.gnu.org/licenses/" 
+target="_blank">http://www.gnu.org/licenses/</a>.</p>
+
+
+<h2><a name="Feedback">Feedback</a></h2>
+<p>If you have any problem, suggestion, comment, or you found a bug in my
+utility, you can send a message at <a href="http://le-tools.com/about.php" 
+target="_blank">http://le-tools.com/about.php</a>.</p>
+
+
+<h2><a name="Credits">Credits</a></h2>
+<ul>
+<li>For database:</li>
+<ul>
+<li>Whois Server Database come from <a href="https://github.com/weppos" 
+target="_blank">https://github.com/weppos</a> (whois repository). 
+Link for the database is <a href="https://github.com/weppos/whois/blob/master/data/tld.json" 
+target="_blank">https://github.com/weppos/whois/blob/master/data/tld.json</a>.</li>
+<li>The Public Suffix List come from <a href="https://publicsuffix.org" 
+target="_blank">https://publicsuffix.org</a>. Link to the database 
+is <a href="https://publicsuffix.org/list/public_suffix_list.dat" 
+target="_blank">https://publicsuffix.org/list/public_suffix_list.dat</a>.</li>
+</ul>
+<li>For icons:</li>
+<ul>
+<li>The main logo of XL-Whois have been created by Icojam (<a 
+href="http://www.icojam.com" target="_blank">http://www.icojam.com</a>) 
+and is licensed as "Public Domain". Many other icons come from the same collection 
+like database search icon, open file icon, create file icon, check update icon</li>
+<li>Clipboard icon has been created by PixelMixer and is distributed as freeware.</li>
+<li>Documentation icon has been created by Oxygen Team (<a href="http://www.oxygen-icons.org" 
+target="_blank">http://www.oxygen-icons.org</a>) and distributed on term of 
+the GNU Lesser General Public License.</li>
+<li>Select folder and view content directory icon come from Danish Royalty 
+Free Icons by Jonas Rask Design (<a href="http://jonasraskdesign.com" 
+target="_blank">http://jonasraskdesign.com</a>). These icons are free to use 
+in both commercial products as well as personal use.</li>
+<li>Filter icons (use, delete, add) and Search icons (search, search previous, 
+search next) in the Whois Database Window come from the Fugue Icons collection 
+by Yusuke Kamiyamane (<a href="http://p.yusukekamiyamane.com" 
+target="_blank">http://p.yusukekamiyamane.com</a>) and are licensed under a 
+Creative Commons Attribution 3.0 License.</li>
+<li>Download icon in the Update Window come from Sinem Icons by Robsonbillponte 
+(<a href="http://robsonbillponte666.deviantart.com" 
+target="_blank">http://robsonbillponte666.deviantart.com</a>) and is distributed 
+as freeware.</li>
+<li>Error icon in the Update Window come from Web 2 Icons by Cheezen 
+(<a href="http://cheezen.deviantart.com" target="_blank">http://cheezen.deviantart.com</a>) 
+and is distributed as freeware.</li>
+</ul>
+</ul>
+
+<br>
+<hr>
+
+<p style="color:#000066; font-size: 100%; font-weight: bold;">XL-Whois<br>Copyright 
+(c) 2015 Alain Rioux</p>
+
+</body>
+</html>
