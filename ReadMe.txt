@@ -1,8 +1,8 @@
 XL-Whois
 Description : Part of the XL-Toolkit, XL-Whois is a tool to gather whois
-              information on domain and IP address. It store the responses
-              into a database that can be used with other tools of the
-              XL-Toolkit.
+              information on domain names and IP addresses. It store the 
+			  responses into a database that can be used with other tools 
+			  of the XL-Toolkit.
 Author 		: Alain Rioux (admin@le-tools.com)
 WebSite		: http://le-tools.com/XL-Whois.html
 GitHub		: https://github.com/arioux/XL-Whois
@@ -47,6 +47,18 @@ What do you need
 
 Versions History
 ----------------
+* Version 2.0
+	- New taskbar shortcuts
+		- Whois function is now enabled or disabled depending if there are items in clipboard
+		- Whois function text is modified with the first parsed item in clipboard
+		- New shortcut to the "View/Edit clipboard content" window
+		- Query options can now be selected from the taskbar menu
+	- New setting options
+		- Start the tool in taskbar (minimized)
+		- Customize User-Agent
+	- Fixed issue with checking update of the Whois Server database on Github
+	- Fixed some display issues
+	
 * Version 1.0
 	- First release.
 
@@ -81,7 +93,7 @@ See Website for available translations.
 Licence
 -------
 
-Copyright (C) 2015  Alain Rioux (le-tools.com)
+Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

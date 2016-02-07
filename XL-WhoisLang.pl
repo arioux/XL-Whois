@@ -70,6 +70,7 @@ sub loadDefaultStr
   $$refSTR{'errDB'}             = 'Error database: ';
   $$refSTR{'errCreatingDB'}     = 'Error creating database: ';
   $$refSTR{'errNoDB'}           = 'No database file.';
+  $$refSTR{'errorMsg'}          = 'Error messsage';
   $$refSTR{'errConnectingDB'}   = 'Error connecting database: ';
   $$refSTR{'errLoadingDB'}      = 'Error loading database.';
   $$refSTR{'errUpdatingDB'}     = 'Error updating database: ';
@@ -99,6 +100,7 @@ sub loadDefaultStr
   $$refSTR{'analysing'}         = 'Analysing';
   $$refSTR{'cancelling'}        = 'Cancelling...';
   $$refSTR{'searching'}         = 'Searching';
+  $$refSTR{'connecting'}        = 'Connecting to';
   $$refSTR{'readyParserOpt'}    = 'Select a object to parse (IPv4, IPv6, Hostname, Domain name)';
   $$refSTR{'readySelWhoisOpt'}  = 'Select a whois option (Domain, Network, DNS)';
   $$refSTR{'readySelWhoisDB'}   = 'Select the Whois Database location or create a new one';
@@ -180,15 +182,23 @@ sub loadDefaultStr
   $$refSTR{'general'}             = 'General';
   $$refSTR{'storage'}             = 'Storage';
   $$refSTR{'database'}            = 'Databases';
+  $$refSTR{'update1'}             = 'You have the latest version installed.';
+  $$refSTR{'update2'}             = 'Check for update';
+  $$refSTR{'update3'}             = 'Update';
+  $$refSTR{'update4'}             = 'Version';
+  $$refSTR{'update5'}             = 'is available. Download it';
+  $$refSTR{'update6'}             = 'Returned code';
+  $$refSTR{'update7'}             = 'Returned error';
   # General tab
   $$refSTR{'tool'}                = 'Tool';
   $$refSTR{'export'}              = 'Export';
   $$refSTR{'checkUpdate'}         = 'Check Update';
   $$refSTR{'chAutoUpdate'}        = 'Check for update at startup';
   $$refSTR{'lblParser'}           = 'Parser';
-  $$refSTR{'lblWhois'}            = 'Whois';
+  $$refSTR{'chStartMinimized'}    = 'Start in taskbar (minimized)';
   $$refSTR{'lblNsLookupTO1'}      = 'Nslookup timeout';
   $$refSTR{'lblNsLookupTO2'}      = 'seconds';
+  $$refSTR{'UserAgent'}           = 'User-Agent';
   # Storage tab
   $$refSTR{'lblReport'}           = 'Folder for reports:';
   $$refSTR{'chAutoViewing'}       = 'Auto viewing, max reports:';
@@ -222,6 +232,23 @@ sub loadDefaultStr
   $$refSTR{'lblIPv6DB'}           = 'IPv6 Database location:';
   $$refSTR{'btnIPv6DBTip'}        = 'Select the IPv6 database file';
   $$refSTR{'btnIPv6DBUptTip'}     = 'Check update for IPv6 Database';
+  $$refSTR{'errDownloadingDB'}    = 'Error downloading Database...';
+  $$refSTR{'updateTLDDB'}         = 'Update TLD Database';
+  $$refSTR{'updatedTLDDB'}        = 'The TLD database has been updated';
+  $$refSTR{'updateWSDB'}          = 'Update Whois Server Database';
+  $$refSTR{'updatedWSDB'}         = 'The Whois Server database has been updated';
+  $$refSTR{'updateIPv4DB'}        = 'Update IPv4 Database';
+  $$refSTR{'updatedIPv4DB'}       = 'The IPv4 database has been updated';
+  $$refSTR{'updateIPv6DB'}        = 'Update IPv6 Database';
+  $$refSTR{'updatedIPv6DB'}       = 'The IPv6 database has been updated';
+  $$refSTR{'currDBDate'}          = 'Current DB date';
+  $$refSTR{'remoteDBDate'}        = 'DB date on';
+  $$refSTR{'updateAvailable'}     = 'An update of the database is available, download';
+  $$refSTR{'DBUpToDate'}          = 'Your database is up to date';
+  $$refSTR{'TLDDBNotExist'}       = 'The TLD database (effective_tld_names.dat) does not exist, download';
+  $$refSTR{'WSDBNotExist'}        = 'The Whois Server database (tld.json) does not exist, download';
+  $$refSTR{'IPv4DBNotExist'}      = 'The IPv4 database (ipv4-address-space.csv) does not exist, download';
+  $$refSTR{'IPv6DBNotExist'}      = 'The IPv6 database (ipv6-unicast-address-assignments.csv) does not exist, download';
   
   # Whois Database Window
   $$refSTR{'winDB'}               = 'Whois Database';
@@ -312,31 +339,7 @@ sub loadDefaultStr
   $$refSTR{'translatorName'}  = '-';
   
   # Database Update Window
-  $$refSTR{'winUpdate'}         = 'Update Database';
-  $$refSTR{'btnUpdateYes'}      = 'Yes';
-  $$refSTR{'btnUpdateNo'}       = 'No';
-  $$refSTR{'btnUpdateOk'}       = 'Ok';
-  $$refSTR{'updatedDB'}         = 'The database has been updated';
-  $$refSTR{'errDownloadingDB'}  = 'Error downloading Database...';
-  $$refSTR{'updateTLDDB'}       = 'Update TLD Database';
-  $$refSTR{'updateWSDB'}        = 'Update Whois Server Database';
-  $$refSTR{'updateIPv4DB'}      = 'Update IPv4 Database';
-  $$refSTR{'updateIPv6DB'}      = 'Update IPv6 Database';
-  $$refSTR{'currDBDate'}        = 'Current DB date';
-  $$refSTR{'remoteDBDate'}      = 'DB date on';
-  $$refSTR{'updateAvailable'}   = 'An update of the database is available, download';
-  $$refSTR{'DBUpToDate'}        = 'Your database is up to date';
-  $$refSTR{'TLDDBNotExist'}     = 'The TLD database (effective_tld_names.dat) does not exist, download';
-  $$refSTR{'WSDBNotExist'}      = 'The Whois Server database (tld.json) does not exist, download';
-  $$refSTR{'IPv4DBNotExist'}    = 'The IPv4 database (ipv4-address-space.csv) does not exist, download';
-  $$refSTR{'IPv6DBNotExist'}    = 'The IPv6 database (ipv6-unicast-address-assignments.csv) does not exist, download';
-  $$refSTR{'update1'}           = 'You have the latest version installed.';
-  $$refSTR{'update2'}           = 'Check for update';
-  $$refSTR{'update3'}           = 'Update';
-  $$refSTR{'update4'}           = 'Version';
-  $$refSTR{'update5'}           = 'is available. Download it';
-  $$refSTR{'update6'}           = 'Returned code';
-  $$refSTR{'update7'}           = 'Returned error';
+
 
 }  #--- End loadStrings
 

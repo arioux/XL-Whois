@@ -21,9 +21,8 @@ following modules installed:
 - threads (v1.96)
 - threads-shared (v1.46)
 - LWP (v6.05)
-- Date-Calc (v6.3)
-- Date-Manip (v6.47)
 - ActiveState-DateTime
+- HTTP-Date (v6.02)
 - DBI (v1.631)
 - Regexp-IPv6 (v0.03)
 - Domain::PublicSuffix (v0.10)
@@ -35,6 +34,12 @@ following modules installed:
 - JSON::Parse (v0.33)
 - base (v2.15)
 - HTTP-Message (v6.06)
+
+
+To do
+-----
+
+- Add support to IPv6 in the Whois Database
 
 
 Packaging

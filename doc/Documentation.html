@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
 <html>
 <!--
-# Copyright (C) 2015  Alain Rioux (le-tools.com)
+# Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@ li { margin: 0.5em 0; }
 <table border=0 cellspacing=0cellpadding=0>
 <tr>
 <td width="80px" align="center" rowspan=2><img src="XL-Whois48.png" alt="Logo" width="48" height="48" border="0"></td>
-<td align="left" valign="center" style="color:#000066; font-size: 100%; font-weight: bold;">XL-Whois<br>Copyright (c) 2015 Alain Rioux<br></td></tr>
+<td align="left" valign="center" style="color:#000066; font-size: 100%; font-weight: bold;">XL-Whois<br>Copyright (c) 2015-2016 Alain Rioux<br></td></tr>
 <tr><td align="left" style="color:#000066; font-size: 90%;">See <a href="./XL-Whois.html#Credits">Credits</a> about the logo</td></tr>
 </table><br>
 
@@ -73,6 +73,7 @@ be downloaded;</li>
 <li>Auto viewing for reports with a maximum of 25;</li>
 <li>Auto update for TLD, Whois Server, IPv4 and IPv6 databases;</li>
 <li>All parser options are selected: IPv4, IPv6, Hostname and Domain Name;</li>
+<li>NsLookup timeout is set to 10 seconds</li>
 <li>Check for update of the tool at startup.</li>
 </ul>
 </ol>
@@ -140,16 +141,24 @@ height="350" border="0">
 See <a href="./XL-Whois.html#Translation">Translation</a> for help about this 
 functionality.</li>
 <li><strong>Check Update:</strong> Check on <a href="https://www.le-tools.com" 
-target="_blank">www.le-tools.com</a> if a tool update is available;</li>
+target="_blank">www.le-tools.com</a> if a tool update is available.</li>
 <li><strong>Check for update at startup:</strong> Check update everytime 
-XL-Whois is started;</li>
+XL-Whois is started.</li>
+</ul>
+<p>In <strong>General</strong> section, you can:</p>
+<ul>
+<li>Choose to <strong>start XL-Whois in the taskbar</strong> (main window 
+minimized).</li>
+<li>Set the <strong>NsLookup timeout</strong>: When XL-Whois tries to resolve a 
+hostname to an IP address or an IP address to a hostname, this is the time it 
+will wait for the answer. Default is 10 seconds.</li>
+<li>Customize the <strong>User-Agent</strong> of XL-Whois: The User-Agent is 
+used to identify the tool when requesting <a href="DatabasesTab">databases</a> 
+from Website.</li>
 </ul>
 <p>In <strong>Parser</strong> section, you can select or deselect objects to 
 be extracted by XL-Whois. Objects are: <strong>IPv4</strong>, <strong>IPv6</strong>, 
 <strong>Hostname</strong> and <strong>Domain name</strong>.</p>
-<p>In <strong>Whois</strong> section, you can set <strong>NsLookup timeout</strong>. 
-When XL-Whois tries to resolve a hostname to an IP address or an IP address to a 
-hostname, this is the time it will wait for the answer. Default is 10 seconds.</p>
 
 <div style="margin-bottom:1.5em;"><a href="#Documentation">Top of the page</a></div>
 <a name="StorageTab">
@@ -299,8 +308,10 @@ database can also be imported or exported (right-click on any element in the gri
 <p>Once everything is ok, you can send your whois request(s). To do this, all you have 
 to do is <strong>select and copy</strong> (to send the data to clipboard) and click on 
 <strong>whois</strong>. You can click the whois button on the main interface or use the 
-taskbar <strong>Whois</strong> function:</p>
-<img src="XL-WhoisTaskbarMenu.png" alt="Xl-Whois Taskbar Menu" width="226" height="184" border="0">
+taskbar <strong>Whois</strong> function<strong>*</strong>:</p>
+<img src="XL-WhoisTaskbarMenu.png" alt="Xl-Whois Taskbar Menu" width="246" height="302" border="0">
+<p><strong>*</strong>: In the taskbar <strong>Whois</strong> function, only the first item 
+is displayed. If there are more than one item, a 3-dot (...) is added at the end.</p>
 <p>You can select anything, from an IP address to a whole page, and the XL-Whois parser 
 will find and enumerate object(s) that can be used for whois.</p>
 <p>Here are some explanations about the <strong>Check db</strong> options:</p>
@@ -352,7 +363,7 @@ parses the response to extract information about the ISP.</li>
 <hr>
 
 <p style="color:#000066; font-size: 100%; font-weight: bold;">XL-Whois<br>Copyright 
-(c) 2015 Alain Rioux</p>
+(c) 2015-2016 Alain Rioux</p>
 
 </body>
 </html>

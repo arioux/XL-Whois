@@ -9,11 +9,11 @@
 #               into a database that can be used with other tools of the
 #               XL-Toolkit.
 # Creation    : 2015-09-30
-# Modified    : 2015-12-10
-my $VERSION   = "1.0";
+# Modified    : 2016-02-06
+my $VERSION   = "1.1";
 # Author      : Alain Rioux (admin@le-tools.com)
 #
-# Copyright (C) 2015  Alain Rioux (le-tools.com)
+# Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -35,9 +35,8 @@ my $VERSION   = "1.0";
 #------------------------------------------------------------------------------#
 use strict;
 use warnings;
-use Date::Calc qw(Date_to_Time);
 use ActiveState::DateTime qw(gmt_offset);
-use Date::Manip::Date;
+use HTTP::Date qw(parse_date str2time);
 use Encode qw(decode encode decode_utf8);
 use Win32::API();
 use Win32::GUI();
@@ -56,11 +55,12 @@ use Net::Whois::Raw qw(whois);
 use Net::DNS;
 use Net::CIDR 'cidr2range';
 use Net::IP::Lite;
-use LWP::Simple;
 use JSON::Parse 'json_file_to_perl';
 use base qw/Net::DNS::Resolver::Base/;
 use HTTP::Request::Common qw(POST);
 use LWP::UserAgent;
+use LWP::Simple;
+use Geo::IP;
 require "XL-WhoisGraph.pl";
 require "XL-WhoisLang.pl";
 
@@ -79,11 +79,12 @@ my %CONFIG      :shared;                                                       #
 my %STR;                                                                       # Strings for GUI
 my $TLDDB_URL  = 'https://publicsuffix.org/list/effective_tld_names.dat';                       # URL of the TLD DB
 my $WSDB_URL   = 'https://raw.githubusercontent.com/weppos/whois/master/data/tld.json';         # URL of the Whois Server DB
+my $WSLOG_URL  = 'https://github.com/weppos/whois/commits/master/data/tld.json';                # URL of the Whois Server DB (Commit page)
 my $IPv4DB_URL = 'http://www.iana.org/assignments/ipv4-address-space/ipv4-address-space.xhtml'; # URL of the IPv4 Address Space (to get modified date)
 my $IPv4DB_CSV = 'http://www.iana.org/assignments/ipv4-address-space/ipv4-address-space.csv';   # URL of the IPv4 Address Space (the csv file)
 my $IPv6DB_URL = 'http://www.iana.org/assignments/ipv6-unicast-address-assignments/ipv6-unicast-address-assignments.xhtml'; # URL of the IPv6 Address Space (to get modified date)
 my $IPv6DB_CSV = 'http://www.iana.org/assignments/ipv6-unicast-address-assignments/ipv6-unicast-address-assignments.csv';   # URL of the IPv6 Address Space (the csv file)
-my $USERAGENT  = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0';    # User-agent of XL-Whois for HTTP
+my $TOTAL_SIZE      :shared = 0;                                               # Total size for download
 my $START = 0;                                                                 # Indicate when program is started
 my $ARROW           :shared;                                                   # Arrow pointer
 my $HOURGLASS       :shared;                                                   # Hourglass pointer
@@ -93,7 +94,6 @@ my $NBR_CHARS       = 0;                                                       #
 my $ADD_FILTER      = 0;                                                       # Indicate that filter must be added to current value
 my $ANALYSIS_QUEUE;                                                            # Queue for Whois Database Analysis
 my $NBR_DELETED_ISP :shared = 0;                                               # Number of deleted ISP in Whois Database Analysis
-my $UPDATE_FLAG     :shared = 0;                                               # Which update in progress ? 1 = TLDDB, 2 = Whois Server DB, 3 = IPv4 DB, 4 = IPv6 DB
 my $TLDDB;                                                                     # TLD Database
 
 #------------------------------------------------------------------------------#
@@ -101,7 +101,7 @@ my $TLDDB;                                                                     #
 #------------------------------------------------------------------------------#
 
 my ($winICO, $logoBmp, $logo128Bmp, $browseBmp, $openDirBmp, $fileOpenBmp, $fileNewBmp,
-    $downloadBmp, $download48Bmp, $error48Bmp, $clipboardBmp, $whoisBmp, $databaseBmp, $config32Bmp, $config128Bmp, 
+    $downloadBmp, $clipboardBmp, $whoisBmp, $databaseBmp, $config32Bmp, $config128Bmp,
     $helpBmp, $aboutBmp, $exportBmp, $importBmp, $extractBmp, $validdbBmp, $searchDB,
     $searchDB_p, $searchDB_n, $filterDB, $filterDB_p, $filterDB_n, $database16) = &loadGraph();
 
@@ -269,7 +269,7 @@ $win->AddLabel(       -name        => 'lblFooter'             ,
 $win->AddLabel(       -name        => 'lblNotReady'           ,
                       -size        => [170, 22]               ,
                       -pos         => [ 10,255]               ,
-                      -background  => [255, 255, 255]         ,
+                      -background  => [250, 250, 250]         ,
                       -foreground  => [  0, 102, 204]         ,
                       -text        => $STR{'lblNotReady'}     ,
                       -font        => $font10u                ,
@@ -281,7 +281,6 @@ $win->AddButton(      -name        => 'btnWhois'              ,
                       -background  => [250, 250, 250]         ,
                       -tip         => $STR{'btnWhoisTip'}     ,
                       -disabled    => 1                       ,
-                      -tabstop     => 1                       ,
                       -ok          => 1                       ,
                       -default     => 1                       , );
 $win->AddButton(      -name        => 'btnWinDatabase'        ,
@@ -289,44 +288,45 @@ $win->AddButton(      -name        => 'btnWinDatabase'        ,
                       -pos         => [315,243]               ,
                       -bitmap      => $databaseBmp            ,
                       -background  => [250, 250, 250]         ,
-                      -tip         => $STR{'btnWinDatabaseTip'},
-                      -tabstop     => 1                       , );
+                      -tip         => $STR{'btnWinDatabaseTip'}, );
 $win->AddButton(      -name        => 'btnWinConfig'          ,
                       -size        => [ 40, 40]               ,
                       -pos         => [360,243]               ,
                       -bitmap      => $config32Bmp            ,
                       -background  => [250, 250, 250]         ,
-                      -tip         => 'Configuration',
-                      -tabstop     => 1                       , );
+                      -tip         => 'Configuration'         , );
 $win->AddButton(      -name        => 'btnHelp'               ,
                       -size        => [ 40, 40]               ,
                       -pos         => [405,243]               ,
                       -bitmap      => $helpBmp                ,
                       -background  => [250, 250, 250]         ,
-                      -tip         => $STR{'btnHelpTip'}      ,
-                      -tabstop     => 1                       , );
+                      -tip         => $STR{'btnHelpTip'}      , );
 $win->AddButton(      -name        => 'btnAbout'              ,
                       -size        => [ 40, 40]               ,
                       -pos         => [450,243]               ,
                       -bitmap      => $aboutBmp               ,
                       -background  => [250, 250, 250]         ,
-                      -tip         => $STR{'btnAboutTip'}     ,
-                      -tabstop     => 1                       , );
+                      -tip         => $STR{'btnAboutTip'}     , );
 
 # Load taskbar menu
 my $trayMenu = Win32::GUI::Menu->new(
- 	"SysTray"               => "SysTray",
-  ">$STR{'menu1'}"        => { -name => 'showWin'     , -onClick => \&Tray_DblClick          },
-  ">$STR{'menu2'}"        => { -name => 'whois'       , -onClick => \&btnWhois_Click         },
-  " > -"                  => 0,
-  ">$STR{'menu3'}"        => { -name => 'whoisdb'     , -onClick => \&btnWinDatabase_Click   },
-  ">$STR{'menu4'}"        => { -name => 'loggingdb'   , -onClick => \&btnLogDbView_Click     },
-  " > -"                  => 0,
-  ">$STR{'checkUpdate'}"  => { -name => 'Update'      , -onClick => \&btnCheckUpdate_Click   },
-  " > -"                  => 0,
-  ">$STR{'menu5'}"        => { -name => 'Help'        , -onClick => \&btnHelp_Click          },
-  ">$STR{'about'}..."     => { -name => 'About'       , -onClick => \&btnAbout_Click         },
-  ">$STR{'menu6'}"        => { -name => 'Quit'        , -onClick => \&winMain_Terminate      },
+ 	"SysTray"                   => "SysTray",
+  ">$STR{'menu2'}"            => { -name => 'whois'       , -onClick => \&btnWhois_Click         },
+  ">$STR{'btnItemClip'}..."   => { -name => 'clipboard'   , -onClick => \&btnItemClip_Click      },
+  " > -"                      => 0,
+  ">Domain whois"             => { -name => 'domainWhois' , -onClick => \&DWTrayMenu_Click       },
+  ">Network whois"            => { -name => 'networkWhois', -onClick => \&NWTrayMenu_Click       },
+  ">DNS Records"              => { -name => 'dnsRecords'  , -onClick => \&DRTrayMenu_Click       },
+  " > -"                      => 0,
+  ">$STR{'menu1'}..."         => { -name => 'showWin'     , -onClick => \&Tray_DblClick          },
+  ">$STR{'menu3'}"            => { -name => 'whoisdb'     , -onClick => \&btnWinDatabase_Click   },
+  ">$STR{'menu4'}"            => { -name => 'loggingdb'   , -onClick => \&btnLogDbView_Click     },
+  " > -"                      => 0,
+  ">$STR{'checkUpdate'}"      => { -name => 'Update'      , -onClick => \&btnCheckUpdate_Click   },
+  " > -"                      => 0,
+  ">$STR{'menu5'}"            => { -name => 'Help'        , -onClick => \&btnHelp_Click          },
+  ">$STR{'about'}..."         => { -name => 'About'       , -onClick => \&btnAbout_Click         },
+  ">$STR{'menu6'}"            => { -name => 'Quit'        , -onClick => \&winMain_Terminate      },
 );
 
 #------------------------------------------------------------------------------#
@@ -335,7 +335,7 @@ my $trayMenu = Win32::GUI::Menu->new(
 
 my $winClip = Win32::GUI::Window->new( -name        => 'winClip'             ,
                                        -background  => [255, 255, 255]       ,
-                                       -parent      => $win                  ,
+                                       #-parent      => $win                  ,
                                        -text        => $STR{'winClip'}       ,
                                        -pos         => [$winPosX, $winPosY]  ,
                                        -size        => [$winWidth,$winHeight],
@@ -343,7 +343,6 @@ my $winClip = Win32::GUI::Window->new( -name        => 'winClip'             ,
                                        -hasmaximize => 1                     ,
                                        -hasminimize => 1                     ,
                                        -resizable   => 1                     ,
-                                       -topmost     => 1                     ,
                                        -dialogui    => 1                     , );
 $winClip->SetIcon($winICO);
 $winClip->AddTextfield( -name        => 'tfClip'            ,
@@ -353,26 +352,22 @@ $winClip->AddTextfield( -name        => 'tfClip'            ,
                         -multiline   => 1                   ,
                         -wantreturn  => 1                   ,
                         -hscroll     => 1                   ,
-                        -vscroll     => 1                   ,
-                        -tabstop     => 1                   , );
+                        -vscroll     => 1                   , );
 $winClip->AddButton(    -name        => 'btnClipOk'         ,
                         -text        => $STR{'btnClipOk'}   ,
                         -size        => [ 80, 30]           ,
                         -pos         => [($winWidth-280)/2,$winHeight-73] ,
-                        -tabstop     => 1                   ,
                         -ok          => 1                   ,
                         -default     => 1                   , );
 $winClip->AddButton(    -name        => 'btnClipEdit'       ,
                         -text        => $STR{'btnClipEdit'} ,
                         -size        => [ 80, 30]           ,
                         -pos         => [($winWidth-280)/2+100,$winHeight-73] ,
-                        -tabstop     => 1                   ,
                         -disabled    => 1                   , );
 $winClip->AddButton(    -name        => 'btnClipParse'      ,
                         -text        => $STR{'btnClipParse'},
                         -size        => [ 80, 30]           ,
-                        -pos         => [($winWidth-280)/2+200,$winHeight-73] ,
-                        -tabstop     => 1                   , );
+                        -pos         => [($winWidth-280)/2+200,$winHeight-73] , );
 
 #------------------------------------------------------------------------------#
 # Config window
@@ -387,7 +382,6 @@ my $winConfig = Win32::GUI::DialogBox->new( -name        => 'winConfig'         
                                             -hasminimize => 0                       ,
                                             -helpbutton  => 0                       ,
                                             -resizable   => 0                       ,
-                                            -topmost     => 1                       ,
                                             -dialogui    => 1                       , );
 $winConfig->SetIcon($winICO);
 
@@ -402,7 +396,6 @@ $winConfig->AddTabStrip(            -name         => 'configTab'           ,
                                     -size         => [505,305]             ,
                                     -pos          => [140,  5]             ,
                                     -fixedwidth   => 1                     ,
-                                    -tabstop      => 1                     ,
                                     -background   => [255, 255, 255]       , );
 $winConfig->configTab->InsertItem(  -text         => $STR{'general'}       , );
 $winConfig->configTab->InsertItem(  -text         => $STR{'storage'}       , );
@@ -435,64 +428,79 @@ $winConfig->AddCheckbox(  -name        => 'chAutoUpdate'          ,
                           -text        => $STR{'chAutoUpdate'}    ,
                           -background  => [255, 255, 255]         ,
                           -font        => $font10                 ,
-                          -tabstop     => 1                       ,
                           -checked     => 1                       , );
+
+# Whois section
+$winConfig->AddLabel(     -name        => 'lblGeneral'             ,
+                          -size        => [ 80, 22]               ,
+                          -pos         => [150,135]               ,
+                          -background  => [255, 255, 255]         ,
+                          -foreground  => [  0, 102, 204]         ,
+                          -text        => $STR{'general'}.':'     ,
+                          -font        => $fontGB                 , );
+$winConfig->AddCheckbox(  -name        => 'chStartMinimized'      ,
+                          -size        => [220, 20]               ,
+                          -pos         => [270,136]               ,
+                          -text        => $STR{'chStartMinimized'},
+                          -background  => [255, 255, 255]         ,
+                          -font        => $font10                 ,
+                          -checked     => 1                       , );
+$winConfig->AddLabel(     -name        => 'lblNsLookupTO1'        ,
+                          -size        => [115, 22]               ,
+                          -pos         => [150,167]               ,
+                          -background  => [255, 255, 255]         ,
+                          -text        => $STR{'lblNsLookupTO1'}.':',
+                          -font        => $font10                 , );
+$winConfig->AddTextfield( -name        => 'tfLookupTO'            ,
+                          -size        => [ 30, 22]               ,
+                          -pos         => [270,165]               , );
+$winConfig->AddLabel(     -name        => 'lblNsLookupTO2'        ,
+                          -size        => [ 70, 22]               ,
+                          -pos         => [305,167]               ,
+                          -background  => [255, 255, 255]         ,
+                          -text        => $STR{'lblNsLookupTO2'}  ,
+                          -font        => $font10                 , );
+$winConfig->AddLabel(     -name        => 'lblUserAgent'          ,
+                          -size        => [115, 22]               ,
+                          -pos         => [150,197]               ,
+                          -background  => [255, 255, 255]         ,
+                          -text        => $STR{'UserAgent'}.':'   ,
+                          -font        => $font10                 , );
+$winConfig->AddTextfield( -name        => 'tfUserAgent'           ,
+                          -size        => [350, 22]               ,
+                          -pos         => [270,195]               , );
 
 # Parser section
 $winConfig->AddLabel(     -name        => 'lblParser'             ,
                           -size        => [ 80, 22]               ,
-                          -pos         => [150,140]               ,
+                          -pos         => [150,230]               ,
                           -background  => [255, 255, 255]         ,
                           -foreground  => [  0, 102, 204]         ,
                           -text        => $STR{'lblParser'}.':'   ,
                           -font        => $fontGB                 , );
 $winConfig->AddCheckbox(  -name        => 'chIPv4'                ,
                           -size        => [ 40, 20]               ,
-                          -pos         => [150,170]               ,
+                          -pos         => [150,260]               ,
                           -background  => [255, 255, 255]         ,
                           -text        => 'IPv4'                  ,
                           -font        => $font10                 , );
 $winConfig->AddCheckbox(  -name        => 'chIPv6'                ,
                           -size        => [ 40, 20]               ,
-                          -pos         => [215,170]               ,
+                          -pos         => [215,260]               ,
                           -background  => [255, 255, 255]         ,
                           -text        => 'IPv6'                  ,
                           -font        => $font10                 , );
 $winConfig->AddCheckbox(  -name        => 'chHostname'            ,
                           -size        => [ 80, 20]               ,
-                          -pos         => [280,170]               ,
+                          -pos         => [280,260]               ,
                           -background  => [255, 255, 255]         ,
                           -text        => 'Hostname'              ,
                           -font        => $font10                 , );
 $winConfig->AddCheckbox(  -name        => 'chDomainName'          ,
                           -size        => [100, 20]               ,
-                          -pos         => [380,170]               ,
+                          -pos         => [380,260]               ,
                           -background  => [255, 255, 255]         ,
                           -text        => 'Domain Name'           ,
-                          -font        => $font10                 , );
-
-# Whois section
-$winConfig->AddLabel(     -name        => 'lblWhois'              ,
-                          -size        => [ 80, 22]               ,
-                          -pos         => [150,210]               ,
-                          -background  => [255, 255, 255]         ,
-                          -foreground  => [  0, 102, 204]         ,
-                          -text        => $STR{'lblWhois'}.':'    ,
-                          -font        => $fontGB                 , );
-$winConfig->AddLabel(     -name        => 'lblNsLookupTO1'        ,
-                          -size        => [115, 22]               ,
-                          -pos         => [150,240]               ,
-                          -background  => [255, 255, 255]         ,
-                          -text        => $STR{'lblNsLookupTO1'}.':',
-                          -font        => $font10                 , );
-$winConfig->AddTextfield( -name        => 'tfLookupTO'            ,
-                          -size        => [ 30, 22]               ,
-                          -pos         => [270,238]               , );
-$winConfig->AddLabel(     -name        => 'lblNsLookupTO2'        ,
-                          -size        => [ 70, 22]               ,
-                          -pos         => [305,240]               ,
-                          -background  => [255, 255, 255]         ,
-                          -text        => $STR{'lblNsLookupTO2'}  ,
                           -font        => $font10                 , );
 
 # Storage tab
@@ -902,7 +910,6 @@ my $winNWD = Win32::GUI::Window->new(  -name        => 'winNWD'              ,
                                        -hasmaximize => 1                     ,
                                        -hasminimize => 1                     ,
                                        -resizable   => 1                     ,
-                                       -topmost     => 1                     ,
                                        -dialogui    => 1                     , );
 $winNWD->SetIcon($winICO);
 $winNWD->AddTextfield(  -name        => 'tfNWD'             ,
@@ -913,13 +920,11 @@ $winNWD->AddTextfield(  -name        => 'tfNWD'             ,
                         -wantreturn  => 1                   ,
                         -hscroll     => 1                   ,
                         -vscroll     => 1                   ,
-                        -readonly    => 1                   ,
-                        -tabstop     => 1                   , );
+                        -readonly    => 1                   , );
 $winNWD->AddButton(     -name        => 'btnNWDOk'          ,
                         -text        => $STR{'btnClipOk'}   ,
                         -size        => [ 80, 30]           ,
                         -pos         => [($winDBw-180)/2,$winDBh-73] ,
-                        -tabstop     => 1                   ,
                         -ok          => 1                   ,
                         -default     => 1                   , );
 
@@ -936,7 +941,6 @@ my $winFilter  = Win32::GUI::DialogBox->new(-name        => 'winFilter'         
                                             -hasminimize => 1                         ,
                                             -helpbutton  => 0                         ,
                                             -resizable   => 0                         ,
-                                            -topmost     => 1                         ,
                                             -dialogui    => 1                         , );
 $winFilter->SetIcon($winICO);
 
@@ -1150,7 +1154,6 @@ my $winPb  = Win32::GUI::DialogBox->new(-name        => 'winPb'                 
                                         -hasminimize => 1                         ,
                                         -helpbutton  => 0                         ,
                                         -resizable   => 0                         ,
-                                        -topmost     => 1                         ,
                                         -dialogui    => 1                         , );
 $winPb->SetIcon($winICO);
 
@@ -1196,7 +1199,6 @@ my $winAbout  = Win32::GUI::DialogBox->new( -name        => 'winAbout'          
                                             -hasminimize => 1                         ,
                                             -helpbutton  => 0                         ,
                                             -resizable   => 0                         ,
-                                            -topmost     => 1                         ,
                                             -dialogui    => 1                         , );
 $winAbout->SetIcon($winICO);
 
@@ -1226,62 +1228,7 @@ $winAbout->AddLabel(  -name        => 'lblAbout3'             ,
                       -font        => $font10                 ,
                       -foreground  => [0  , 0  , 102]         ,
                       -background  => [255, 255, 255]         ,
-                      -text        => '© Copyright 2015 Alain Rioux', );
-
-#------------------------------------------------------------------------------#
-# Database Update Window
-#------------------------------------------------------------------------------#
-
-my $winUpdate = Win32::GUI::DialogBox->new( -name        => 'winUpdate'               ,
-                                            -text        => $STR{'winUpdate'}         ,
-                                            -background  => [255, 255, 255]           ,
-                                            -parent      => $winConfig                ,
-                                            -pos         => [$winPosX, $winPosY]      ,
-                                            -size        => [480, 160]                ,
-                                            -hasmaximize => 0                         ,
-                                            -hasminimize => 0                         ,
-                                            -helpbutton  => 0                         ,
-                                            -resizable   => 0                         ,
-                                            -dialogui    => 1                         , );
-$winUpdate->SetIcon($winICO);
-$winUpdate->AddLabel(       -name        => 'lblUpdateLogo'  ,
-                            -size        => [ 48, 48]        ,
-                            -pos         => [ 13,  8]        ,
-                            -bitmap      => $download48Bmp   ,
-                            -background  => [255, 255, 255]  , );
-$winUpdate->AddLabel(       -name        => 'lblUpdateErr'   ,
-                            -size        => [ 48, 48]        ,
-                            -pos         => [ 13,  8]        ,
-                            -bitmap      => $error48Bmp      ,
-                            -background  => [255, 255, 255]  ,
-                            -visible     => 0                , );
-$winUpdate->AddLabel(       -name        => 'lblUpdateMsg'   ,
-                            -size        => [390, 70]        ,
-                            -pos         => [ 75, 10]        ,
-                            -background  => [255, 255, 255]  ,
-                            -font        => $font10          ,
-                            -valign      => 'center'         , );
-$winUpdate->AddButton(      -name        => 'btnUpdateYes'   ,
-                            -size        => [ 60, 30]        ,
-                            -pos         => [170, 90]        ,
-                            -text        => $STR{'btnUpdateYes'},
-                            -font        => $font10          ,
-                            -tabstop     => 1                , );
-$winUpdate->AddButton(      -name        => 'btnUpdateNo'    ,
-                            -size        => [ 60, 30]        ,
-                            -pos         => [250, 90]        ,
-                            -text        => $STR{'btnUpdateNo'},
-                            -font        => $font10          ,
-                            -tabstop     => 1                , );
-$winUpdate->AddButton(      -name        => 'btnUpdateOk'    ,
-                            -size        => [ 60, 30]        ,
-                            -pos         => [210, 90]        ,
-                            -text        => $STR{'btnUpdateOk'},
-                            -font        => $font10          ,
-                            -tabstop     => 1                , 
-                            -ok          => 1                ,
-                            -default     => 1                ,
-                            -visible     => 0                , );
+                      -text        => '© Copyright 2015-2016 Alain Rioux', );
 
 #------------------------------------------------------------------------------#
 # Starting program
@@ -1290,21 +1237,23 @@ $winUpdate->AddButton(      -name        => 'btnUpdateOk'    ,
 if (-T $CONFIG_FILE) {
   &loadConfig(\%CONFIG);
 
-  # Update Databases
-  if ($CONFIG{'TLD_DB_AUTO_UPDATE'} or $CONFIG{'WS_DB_AUTO_UPDATE'} or $CONFIG{'IPv4_DB_AUTO_UPDATE'} or $CONFIG{'IPv6_DB_AUTO_UPDATE'}) {
+  # Update tool and database
+  if ($CONFIG{'TOOL_AUTO_UPDATE'} or $CONFIG{'TLD_DB_AUTO_UPDATE'} or $CONFIG{'WS_DB_AUTO_UPDATE'} or $CONFIG{'IPv4_DB_AUTO_UPDATE'} or $CONFIG{'IPv6_DB_AUTO_UPDATE'}) {
     threads->create(sub {
+      # Update Tool ?
+      if ($CONFIG{'TOOL_AUTO_UPDATE'})                                { &updateTool(0);   }
       # Update TLDDB ?
-      if ($CONFIG{'TLD_DB_AUTO_UPDATE'}  and $CONFIG{'TLD_DB_FILE'})  { &checkTLDDB(0);  }
+      if ($CONFIG{'TLD_DB_AUTO_UPDATE'}  and $CONFIG{'TLD_DB_FILE'})  { &updateTLDDB(0);  }
       # Update Whois Server DB ?
-      if ($CONFIG{'WS_DB_AUTO_UPDATE'}   and $CONFIG{'WS_DB_FILE'})   { &checkWSDB(0);   }
+      if ($CONFIG{'WS_DB_AUTO_UPDATE'}   and $CONFIG{'WS_DB_FILE'})   { &updateWSDB(0);   }
       # Update IPv4 DB ?
-      if ($CONFIG{'IPv4_DB_AUTO_UPDATE'} and $CONFIG{'IPv4_DB_FILE'}) { &checkIPv4DB(0); }
+      if ($CONFIG{'IPv4_DB_AUTO_UPDATE'} and $CONFIG{'IPv4_DB_FILE'}) { &updateIPv4DB(0); }
       # Update IPv6 DB ?
-      if ($CONFIG{'IPv6_DB_AUTO_UPDATE'} and $CONFIG{'IPv6_DB_FILE'}) { &checkIPv6DB(0); }
+      if ($CONFIG{'IPv6_DB_AUTO_UPDATE'} and $CONFIG{'IPv6_DB_FILE'}) { &updateIPv6DB(0); }
     });
   }
 
-  &isWhoisReady();
+  &isWhoisReady(0);
   
 } else {
   # First start of the tool, Load configuration wizard
@@ -1312,7 +1261,7 @@ if (-T $CONFIG_FILE) {
 }
 
 $START = 1;
-$win->Show();
+if (!$CONFIG{'START_MINIMIZED'}) { $win->Show(); }
 Win32::GUI::Dialog();
 
 #--------------------------#
@@ -1328,7 +1277,6 @@ sub winMain_Terminate
 sub winMain_Minimize
 #--------------------------#
 {
-  $win->Disable();
   $win->Hide();
   if ($THR and $THR->is_running()) { $win->Tray->ShowBalloon(); }
   return(0);
@@ -1336,11 +1284,76 @@ sub winMain_Minimize
 }  #--- End winMain_Minimize
 
 #--------------------------#
+sub DWTrayMenu_Click
+#--------------------------#
+{
+  # Save the choice
+  if (!$trayMenu->{'domainWhois'}->Checked()) {
+    $trayMenu->{'domainWhois'}->Checked(1);
+    $CONFIG{'OPT_DOMAIN'} = 1;
+    $win->chDomain->Checked(1);
+    &saveConfig(\%CONFIG);
+  } else {
+    $trayMenu->{'domainWhois'}->Checked(0);
+    $CONFIG{'OPT_DOMAIN'} = 0;
+    $win->chDomain->Checked(0);
+    &saveConfig(\%CONFIG);
+  }
+  
+  # Ready ?
+  &isWhoisReady(0);
+
+}  #--- End DWTrayMenu_Click
+
+#--------------------------#
+sub NWTrayMenu_Click
+#--------------------------#
+{
+  # Save the choice
+  if (!$trayMenu->{'networkWhois'}->Checked()) {
+    $trayMenu->{'networkWhois'}->Checked(1);
+    $CONFIG{'OPT_NETWORK'} = 1;
+    $win->chNetwork->Checked(1);
+    &saveConfig(\%CONFIG);
+  } else {
+    $trayMenu->{'networkWhois'}->Checked(0);
+    $CONFIG{'OPT_NETWORK'} = 0;
+    $win->chNetwork->Checked(0);
+    &saveConfig(\%CONFIG);
+  }
+  
+  # Ready ?
+  &isWhoisReady(0);
+
+}  #--- End NWTrayMenu_Click
+
+#--------------------------#
+sub DRTrayMenu_Click
+#--------------------------#
+{
+  # Save the choice
+  if (!$trayMenu->{'dnsRecords'}->Checked()) {
+    $trayMenu->{'dnsRecords'}->Checked(1);
+    $CONFIG{'OPT_DNS'} = 1;
+    $win->chDNS->Checked(1);
+    &saveConfig(\%CONFIG);
+  } else {
+    $trayMenu->{'dnsRecords'}->Checked(0);
+    $CONFIG{'OPT_DNS'} = 0;
+    $win->chDNS->Checked(0);
+    &saveConfig(\%CONFIG);
+  }
+  
+  # Ready ?
+  &isWhoisReady(0);
+
+}  #--- End DRTrayMenu_Click
+
+#--------------------------#
 sub Tray_DblClick
 #--------------------------#
 {
-  $win->Enable();
-  $win->Show();  
+  $win->Show(1);
 
 }  #--- End Tray_DblClick
 
@@ -1348,6 +1361,32 @@ sub Tray_DblClick
 sub Tray_RightClick
 #--------------------------#
 {
+  if ($win->chDomain->Checked())  { $trayMenu->{'domainWhois'}->Checked(1);  }
+  if ($win->chNetwork->Checked()) { $trayMenu->{'networkWhois'}->Checked(1); }
+  if ($win->chDNS->Checked())     { $trayMenu->{'dnsRecords'}->Checked(1);   }
+  &isWhoisReady(0);
+  if ($trayMenu->{'whois'}->Enabled()) {
+    # Parse the first item of clipboard
+    my $menuText;
+    my %itemsIndex;
+    my %itemsType;
+    my $nbrItems = &extractRequestItems(\%itemsIndex, \%itemsType);
+    if ($nbrItems > 0) {
+      # Found the first extracted item
+      foreach my $item (sort { $itemsIndex{$a} <=> $itemsIndex{$b} } keys(%itemsIndex)) {
+        $menuText .= $item;
+        last;
+      }
+      # More than one item
+      if ($nbrItems > 1) { $menuText .= '...'; }
+      $trayMenu->{'whois'}->Change( -text => "Whois $menuText");
+    # Disable Whois function in Tray Menu
+    } else {
+      $trayMenu->{'whois'}->Change( -text => "Whois");
+      $trayMenu->{'whois'}->Enabled(0);
+    }    
+  # Menu item disabled
+  } else { $trayMenu->{'whois'}->Change( -text => "Whois"); }
   $win->TrackPopupMenu($trayMenu->{SysTray});
   return(1);
 
@@ -1421,8 +1460,8 @@ sub btnClipParse_Click
   my %itemsIndex;
   my %itemsType;
   my $nbrItems = &extractRequestItems(\%itemsIndex, \%itemsType);
-  if ($nbrItems == 0) {
-    Win32::GUI::MessageBox($win, STR{'errNoValidData'}, $STR{'error'}, 0x40010);
+  if (!$nbrItems) {
+    Win32::GUI::MessageBox($win, $STR{'errNoValidData'}, $STR{'error'}, 0x40010);
     return(0);
     
   # Whois Request
@@ -1445,16 +1484,18 @@ sub chDomain_Click
 #--------------------------#
 {
   # Save the choice
-  if ($win->chDomain->Checked() == 1) {
+  if ($win->chDomain->Checked()) {
     $CONFIG{'OPT_DOMAIN'} = 1;
+    $trayMenu->{'domainWhois'}->Checked(1);
     &saveConfig(\%CONFIG);
   } else {
     $CONFIG{'OPT_DOMAIN'} = 0;
+    $trayMenu->{'domainWhois'}->Checked(0);
     &saveConfig(\%CONFIG);
   }
   
   # Ready ?
-  &isWhoisReady();
+  &isWhoisReady(0);
 
 }  #--- End chDomain_Click
 
@@ -1463,16 +1504,18 @@ sub chNetwork_Click
 #--------------------------#
 {
   # Save the choice
-  if ($win->chNetwork->Checked() == 1) {
+  if ($win->chNetwork->Checked()) {
     $CONFIG{'OPT_NETWORK'} = 1;
+    $trayMenu->{'networkWhois'}->Checked(1);
     &saveConfig(\%CONFIG);
   } else {
     $CONFIG{'OPT_NETWORK'} = 0;
+    $trayMenu->{'networkWhois'}->Checked(0);
     &saveConfig(\%CONFIG);
   }
   
   # Ready ?
-  &isWhoisReady();
+  &isWhoisReady(0);
 
 }  #--- End chNetwork_Click
 
@@ -1481,16 +1524,18 @@ sub chDNS_Click
 #--------------------------#
 {
   # Save the choice
-  if ($win->chDNS->Checked() == 1) {
+  if ($win->chDNS->Checked()) {
     $CONFIG{'OPT_DNS'} = 1;
+    $trayMenu->{'dnsRecords'}->Checked(1);
     &saveConfig(\%CONFIG);
   } else {
     $CONFIG{'OPT_DNS'} = 0;
+    $trayMenu->{'dnsRecords'}->Checked(0);
     &saveConfig(\%CONFIG);
   }
   
   # Ready ?
-  &isWhoisReady();
+  &isWhoisReady(0);
 
 }  #--- End chDNS_Click
 
@@ -1512,7 +1557,7 @@ sub chCheckLogging_Click
 #--------------------------#
 {
   # Save the choice
-  if ($win->chCheckLogging->Checked() == 1) {
+  if ($win->chCheckLogging->Checked()) {
     $CONFIG{'CHECK_LOGGING_DB'} = 1;
     &saveConfig(\%CONFIG);
   } else {
@@ -1708,7 +1753,7 @@ sub logDBlineDelete_Click
           # Database: table = LOGGING_DB, Fields = date, request, details, comment
           my $sth = $dbh->prepare("DELETE from LOGGING_DB where date == ?");
           my $rv = $sth->execute($dateEntry);
-          if ($rv < 0) { Win32::GUI::MessageBox($winLogDB, STR{'errDB'}.$DBI::errstr, $STR{'error'}, 0x40010); }
+          if ($rv < 0) { Win32::GUI::MessageBox($winLogDB, $STR{'errDB'}.$DBI::errstr, $STR{'error'}, 0x40010); }
           else { 
             # Find the entry in grid and delete
             for (my $k = $i; $k < $winLogDB->LogDBGrid->GetRows(); $k++) {
@@ -1981,12 +2026,12 @@ sub isWhoisReady
   my $nextStep;
   
   # Parser
-  if ($winConfig->chIPv4->Checked() == 0 and $winConfig->chIPv6->Checked() == 0 and $winConfig->chHostname->Checked() == 0 and $winConfig->chDomainName->Checked() == 0) {
+  if (!$winConfig->chIPv4->Checked() and !$winConfig->chIPv6->Checked() and !$winConfig->chHostname->Checked() and !$winConfig->chDomainName->Checked()) {
     $nextStep = $STR{'readyParserOpt'};
   }
   
   # Options
-  if ($win->chDomain->Checked() == 0 and $win->chNetwork->Checked() == 0 and $win->chDNS->Checked() == 0) {
+  if (!$win->chDomain->Checked() and !$win->chNetwork->Checked() and !$win->chDNS->Checked()) {
     $nextStep = $STR{'readySelWhoisOpt'};
   }
   
@@ -2002,7 +2047,7 @@ sub isWhoisReady
   }
   
   # Logging Database location (optional)
-  if (($CONFIG{'CHECK_LOGGING_DB'} or $winConfig->chLogActivate->Checked() == 1) and (!$CONFIG{'LOGGING_DB_FILE'} or !-f $CONFIG{'LOGGING_DB_FILE'})) {
+  if (($CONFIG{'CHECK_LOGGING_DB'} or $winConfig->chLogActivate->Checked()) and (!$CONFIG{'LOGGING_DB_FILE'} or !-f $CONFIG{'LOGGING_DB_FILE'})) {
     $nextStep = $STR{'readySelLoggingDB'};
   }
   
@@ -2019,10 +2064,12 @@ sub isWhoisReady
   # Return an error message or enable the button
   if ($nextStep) {
     $win->btnWhois->Disable();
+    $trayMenu->{'whois'}->Enabled(0);
     $win->lblNotReady->Show();
     if ($confirm) { Win32::GUI::MessageBox($win, "$STR{'notReady'} ?\n\n$STR{'nextStep'}: $nextStep", $STR{'notReady'}, 0x40040); }
   } else {
     $win->btnWhois->Enable();
+    $trayMenu->{'whois'}->Enabled(1);
     $win->lblNotReady->Hide();
   }
 
@@ -2058,7 +2105,7 @@ sub extractRequestItems
       
       # IPv4
       if    ($item =~ /(?:[^0-9]|^)((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))(?:[^0-9\.]|$)/
-             and $winConfig->chIPv4->Checked() == 1) {
+             and $winConfig->chIPv4->Checked()) {
         $nbrItems++;
         $el = $1;
         $$refItemsIndex{$el} = $nbrItems;
@@ -2067,7 +2114,7 @@ sub extractRequestItems
         $ipv4Found = 1;
       }
       # Hostname
-      if ($item =~ /((?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.){2,}[a-zA-Z]{2,})(?:[^a-zA-Z]|$)/ and $winConfig->chHostname->Checked() == 1) {
+      if ($item =~ /((?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.){2,}[a-zA-Z]{2,})(?:[^a-zA-Z]|$)/ and $winConfig->chHostname->Checked()) {
         $el         = $1;
         my $testObj = $el;
         # Domain must be valid
@@ -2083,7 +2130,7 @@ sub extractRequestItems
         }
       }
       # Domain name
-      if ($item =~ /((?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,})(?:[^\w\.\-]|$)/ and $winConfig->chDomainName->Checked() == 1) {
+      if ($item =~ /((?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,})(?:[^\w\.\-]|$)/ and $winConfig->chDomainName->Checked()) {
         $el = $1;
         # Domain must be valid
         if ($el and my $dom = $TLDDB->get_root_domain(lc($el))) {
@@ -2096,7 +2143,7 @@ sub extractRequestItems
       }
       
       # IPv6
-      if ($item =~ /($IPv6_re)/ and $winConfig->chIPv6->Checked() == 1) {
+      if ($item =~ /($IPv6_re)/ and $winConfig->chIPv6->Checked()) {
         $el = $1;
         if ($el =~ /^$IPv6_re$/) {
           $nbrItems++;
@@ -2314,7 +2361,7 @@ sub importWhoisDB
   
   # Status bar
   $nbrISP = $winDB->DBGrid->GetRows() - 1;
-  $winDB->statusBar->Text(" $STR{'numberISP'}: $nbrISP | $STR{'numberISP'} STR{'added'}: $nbrAdd | $STR{'numberISP'} STR{'modified'}: $nbrModif");
+  $winDB->statusBar->Text(" $STR{'numberISP'}: $nbrISP | $STR{'numberISP'} $STR{'added'}: $nbrAdd | $STR{'numberISP'} $STR{'modified'}: $nbrModif");
   
   # Turn off progress bar
   $winPb->lblPbCurr->Text('');
@@ -2558,7 +2605,7 @@ sub btnExtract2DB_Click
         
         # Status bar
         $nbrISP = $winDB->DBGrid->GetRows() - 1;
-        $winDB->statusBar->Text(" $STR{'numberISP'}: $nbrISP | $STR{'numberISP'} STR{'added'}: $nbrAdd | $STR{'numberISP'} STR{'modified'}: $nbrModif");
+        $winDB->statusBar->Text(" $STR{'numberISP'}: $nbrISP | $STR{'numberISP'} $STR{'added'}: $nbrAdd | $STR{'numberISP'} $STR{'modified'}: $nbrModif");
         
         # Turn off progress bar
         $winPb->lblPbCurr->Text('');
@@ -3315,7 +3362,7 @@ sub applyFilters
   
   $winDB->DBGrid->Refresh();
   my $nbrISP = $winDB->DBGrid->GetRows() - 1;
-  $winDB->statusBar->Text(" $STR{'numberISP'}: $nbrISP | STR{'numberISP'} STR{'displayed'}: $nbrDisplayedRow");
+  $winDB->statusBar->Text(" $STR{'numberISP'}: $nbrISP | $STR{'numberISP'} $STR{'displayed'}: $nbrDisplayedRow");
 
 
 }  #--- End applyFilters
@@ -3573,13 +3620,13 @@ sub newerISP
   if (!(split(/\t/, $response))[4]) { return(1); }
   if (!(split(/\t/, $newISP))[4]  ) { return(0); }
   
-  # Date format 2010-01-01
+  # Date format 2016-01-01
   my ($dateNewISP) = (split(/\t/, $newISP))[4];
   my ($dateOld)    = (split(/\t/, $response))[4];
   
   # Convert to unixtime
-  my $time1 = date2time($dateNewISP);
-  my $time2 = date2time($dateOld);
+  my $time1 = str2time($dateNewISP);
+  my $time2 = str2time($dateOld);
   
   # Compare
   if ($time1 <= $time2) { return(0); } # $newISP is older or equal
@@ -3603,7 +3650,7 @@ sub modifyISP
   my $isp        = $ISP2add[2];
   my $country    = $ISP2add[3];
   my $dateStr    = $ISP2add[4];
-  my $time       = &date2time($dateStr);
+  my $time       = str2time($dateStr);
   my $sth = $$refDbh->prepare("UPDATE WHOIS_DB SET isp = ?, country = ?, date = ?
                               WHERE $ipStartInt == range_s AND $ipEndInt == range_e");
   my $rv = $sth->execute($isp, $country, $time);
@@ -3694,7 +3741,7 @@ sub addISP
   my $isp        = $$refNewISP[2];
   my $country    = $$refNewISP[3];
   my $dateStr    = $$refNewISP[4];
-  my $time       = &date2time($dateStr);
+  my $time       = str2time($dateStr);
   my $rv = $sth->execute($ipStartInt, $ipEndInt, $isp, $country, $time);
   if ($rv < 0) {
     Win32::GUI::MessageBox($win, $STR{'errDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
@@ -4161,7 +4208,7 @@ sub btnWhois_Click
         }
         
         # Connect to Logging Database
-        if ($winConfig->chLogActivate->Checked() == 1 and $dbLogFile and -f $dbLogFile) {
+        if ($winConfig->chLogActivate->Checked() and $dbLogFile and -f $dbLogFile) {
           my $dsnLog = "DBI:SQLite:dbname=$dbLogFile";
           $dbhLog    = DBI->connect($dsnLog, undef, undef, { RaiseError => 1, AutoCommit => 1 })
                        or Win32::GUI::MessageBox($win, $STR{'errConnectingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
@@ -4179,11 +4226,11 @@ sub btnWhois_Click
           $winPb->lblPbCurr->Text("Whois on $item...");
           
           # Check databases
-          if (($checkDBOpt and ($checkDBOpt == 1 or $checkDBOpt == 2) and $win->chNetwork->Checked() == 1 and $itemsType{$item} eq 'IPv4') or $checkLogging) {
+          if (($checkDBOpt and ($checkDBOpt == 1 or $checkDBOpt == 2) and $win->chNetwork->Checked() and $itemsType{$item} eq 'IPv4') or $checkLogging) {
             my $resCheckDB;
             
             # Check Whois Database (IPv4 and Network whois only)
-            if ($checkDBOpt and ($checkDBOpt == 1 or $checkDBOpt == 2) and $win->chNetwork->Checked() == 1 and $itemsType{$item} eq 'IPv4') {
+            if ($checkDBOpt and ($checkDBOpt == 1 or $checkDBOpt == 2) and $win->chNetwork->Checked() and $itemsType{$item} eq 'IPv4') {
               my ($isp, $country, $time) = &checkIP_WhoisDB($item, \$dbh);
               # ISP is already known, ignore the request
               if    ($checkDBOpt == 2 and $isp) { $answer = 7; }
@@ -4246,7 +4293,7 @@ sub btnWhois_Click
             $return = &writeReport($refAnswer, $date);
             
             # Feed logging database
-            if ($winConfig->chLogActivate->Checked() == 1) {
+            if ($winConfig->chLogActivate->Checked()) {
               # Set lookup string
               my $lookup;
               my $i = 1;
@@ -4259,7 +4306,7 @@ sub btnWhois_Click
             }
             
             # Keep Network whois data
-            if ($winConfig->chDBCache->Checked() == 1 and $$refAnswer{'networkInfos'.'1'} and $win->chNetwork->Checked() == 1) {
+            if ($winConfig->chDBCache->Checked() and $$refAnswer{'networkInfos'.'1'} and $win->chNetwork->Checked()) {
               my $k = 1;
               while ($$refAnswer{"networkInfos$k"}) {
                 my $ip = $$refAnswer{"ip$k"};
@@ -4308,7 +4355,7 @@ sub btnWhois_Click
                   my $newISPStr = "$STR{'current'}:\n$STR{'ISP'}: $fields[2]\n$STR{'cbFilterField4'}: $fields[3]\n$STR{'date'}: $fields[4]";
                   
                   # Yes (6), No (7), Cancel (2)
-                  $answer = Win32::GUI::MessageBox($win, "$STR{'item'} \xAB $item \xBB STR{'wasFoundWhoisDB'}\n\n$oldISPStr\n\n$newISPStr\n\nSTR{'updateEntry'} ?", $STR{'checkWhois'}, 0x1023);
+                  $answer = Win32::GUI::MessageBox($win, "$STR{'item'} \xAB $item \xBB $STR{'wasFoundWhoisDB'}\n\n$oldISPStr\n\n$newISPStr\n\n$STR{'updateEntry'} ?", $STR{'checkWhois'}, 0x1023);
                   $winPb->SetForegroundWindow();
                   
                   # Cancel, finish all requests
@@ -4343,7 +4390,7 @@ sub btnWhois_Click
           }
           
           # Store Network whois data
-          if ($winConfig->chDBCache->Checked() == 1 and scalar(keys %nwData) and $itemsType{$item} eq 'IPv4') {
+          if ($winConfig->chDBCache->Checked() and scalar(keys %nwData) and $itemsType{$item} eq 'IPv4') {
             foreach my $ip (keys %nwData) {
               my ($range_s, $range_e) = &checkRange_WhoisDB($ip, \$dbh);
               if ($range_s and $range_e) {
@@ -4368,12 +4415,12 @@ sub btnWhois_Click
           # Show report depending on config
           if ((!$answer or $answer == 6) and $reportPath) {
             # Auto view reports in default HTML viewer
-            if ($winConfig->chAutoViewing->Checked() == 1 and $nbrItems <= $winConfig->tfMaxView->Text()) {
+            if ($winConfig->chAutoViewing->Checked() and $nbrItems <= $winConfig->tfMaxView->Text()) {
               $win->ShellExecute('open', $reportPath,'','',1)
                 or Win32::GUI::MessageBox($win, $STR{'errViewingReport'}.Win32::GetLastError(), $STR{'error'}, 0x40010);
             }
             # Auto view folder
-            if ($winConfig->chAutoViewDir->Checked() == 1) { &btnOpenDir_Click; }
+            if ($winConfig->chAutoViewDir->Checked()) { &btnOpenDir_Click; }
           }
         }
         
@@ -4432,18 +4479,18 @@ sub whoisReq
   if ($error != 1) {
     # Do main request
     $response{'query'} = $item;
-    if    ($isIP   and ($win->chNetwork->Checked() == 1)) {
+    if    ($isIP   and ($win->chNetwork->Checked())) {
       $response{'ip'.'1'} = $item;
       &networkWhois($response{'query'}, 1, $item, \%response, $refIPv4, $refIPv6);
     }
-    elsif ($domain and ($win->chDomain->Checked()  == 1)) {
+    elsif ($domain and ($win->chDomain->Checked())) {
       $response{'domain'.'1'} = $domain;
       &domainWhois($response{'query'}, 1, $domain, \%response, $refTLD, $refWSL);
     }
     
     # Do secondary request
     my @resps;
-    if (($isIP and ($win->chDomain->Checked() == 1)) or ($domain and ($win->chNetwork->Checked() == 1))) {
+    if (($isIP and ($win->chDomain->Checked())) or ($domain and ($win->chNetwork->Checked()))) {
       # NSlookup
       $winPb->lblPbCurr->Text("$response{'query'}: nslookup -> $item");
       
@@ -4470,7 +4517,7 @@ sub whoisReq
     }
     
     # DNS Records
-    if ($win->chDNS->Checked() == 1) {
+    if ($win->chDNS->Checked()) {
       my @host;
       # Initial request was an IP address
       if ($isIP) {
@@ -4839,7 +4886,7 @@ sub writeReport
     if ($comment) { $html .= $comment . "\n"; }
     $html .= '</div>'."\n".'</div>'."\n";
     # Domain whois
-    if ($$refAnswer{'domainInfos'.'1'} and ($win->chDomain->Checked() == 1)) {
+    if ($$refAnswer{'domainInfos'.'1'} and ($win->chDomain->Checked())) {
       $html .= '<h2>Domain whois</h2>' . "\n";
       my $j = 1;
       while ($$refAnswer{"domainInfos$j"}) {
@@ -4855,7 +4902,7 @@ sub writeReport
       }
     }
     # Network whois
-    if ($$refAnswer{'networkInfos'.'1'} and ($win->chNetwork->Checked() == 1)) {
+    if ($$refAnswer{'networkInfos'.'1'} and ($win->chNetwork->Checked())) {
       $html .= '<h2>Network whois</h2>' . "\n";
       my $k = 1;
       while ($$refAnswer{"networkInfos$k"}) {
@@ -4874,7 +4921,7 @@ sub writeReport
       }
     }
     # DNS Records
-    if ($$refAnswer{'dnsRecords'.'1'}   and ($win->chDNS->Checked() == 1)) {
+    if ($$refAnswer{'dnsRecords'.'1'}   and ($win->chDNS->Checked())) {
       $html .= '<h2>DNS Records</h2>' . "\n";
       my $l = 1;
       while ($$refAnswer{"dnsRecords$l"}) {
@@ -5053,19 +5100,6 @@ sub btnAbout_Click
 }  #--- End btnAbout_Click
 
 #--------------------------#
-sub date2time
-#--------------------------#
-{
-  # Local variables
-  my $dateStr         = shift;
-  my ($y1, $m1, $d1)  = split(/\-/, $dateStr);
-  my $time            = Date_to_Time($y1, $m1, $d1, 0, 0, 0);
-
-  return($time);
-
-}  #--- End date2time
-
-#--------------------------#
 sub time2Date
 #--------------------------#
 {
@@ -5205,7 +5239,7 @@ sub firstStart
         $winConfig->tfTLDDB->Text($localTLDDB);
         $winConfig->chTLDDBAutoUpt->Checked(1); # Set auto update for TLD Database
         $CONFIG{'TLD_DB_AUTO_UPDATE'} = 1;
-      } else { Win32::GUI::MessageBox($winPb, STR{'errDownloadTLDDB'}.'...', $STR{'error'}, 0x40010); }
+      } else { Win32::GUI::MessageBox($winPb, $STR{'errDownloadTLDDB'}.'...', $STR{'error'}, 0x40010); }
       
       # Download Whois Server Database
       $return = 0;
@@ -5260,6 +5294,8 @@ sub firstStart
       # Whois
       $winConfig->tfLookupTO->Text(10); # Set Nslookup timeout to 10 seconds
       $CONFIG{'NSLOOKUP_TIMEOUT'} = 10;
+      $winConfig->tfUserAgent->Text('XL-Whois (http://www.le-tools.com)'); # Default User-Agent
+      $CONFIG{'USERAGENT'} = 'XL-Whois (http://www.le-tools.com)'; 
       
       # Turn off progress bar
       $winPb->lblPbCurr->Text('');
@@ -5268,7 +5304,7 @@ sub firstStart
       &winPb_Terminate;
   
       &saveConfig(\%CONFIG);
-      &isWhoisReady();
+      &isWhoisReady(0);
       
       # Send a test ? (program directory)
       $answer = Win32::GUI::MessageBox($win, $STR{'defaultConfigSet'}, $STR{'config'}, 0x41024);
@@ -5310,15 +5346,18 @@ sub configTab_Click
     $winConfig->btnCheckUpdate->Show();
     $winConfig->chAutoUpdate->Show();
     $winConfig->btnExportLang->Show();
+    $winConfig->lblGeneral->Show();
+    $winConfig->chStartMinimized->Show();
+    $winConfig->lblNsLookupTO1->Show();
+    $winConfig->tfLookupTO->Show();
+    $winConfig->lblNsLookupTO2->Show();
+    $winConfig->lblUserAgent->Show();
+    $winConfig->tfUserAgent->Show();
     $winConfig->lblParser->Show();
     $winConfig->chIPv4->Show();
     $winConfig->chIPv6->Show();
     $winConfig->chHostname->Show();
     $winConfig->chDomainName->Show();
-    $winConfig->lblWhois->Show();
-    $winConfig->lblNsLookupTO1->Show();
-    $winConfig->tfLookupTO->Show();
-    $winConfig->lblNsLookupTO2->Show();
     # Storage tab
     $winConfig->lblReport->Hide();
     $winConfig->tfReportDir->Hide();
@@ -5377,15 +5416,18 @@ sub configTab_Click
     $winConfig->btnCheckUpdate->Hide();
     $winConfig->chAutoUpdate->Hide();
     $winConfig->btnExportLang->Hide();
+    $winConfig->lblGeneral->Hide();
+    $winConfig->chStartMinimized->Hide();
+    $winConfig->lblNsLookupTO1->Hide();
+    $winConfig->tfLookupTO->Hide();
+    $winConfig->lblNsLookupTO2->Hide();
+    $winConfig->lblUserAgent->Hide();
+    $winConfig->tfUserAgent->Hide();
     $winConfig->lblParser->Hide();
     $winConfig->chIPv4->Hide();
     $winConfig->chIPv6->Hide();
     $winConfig->chHostname->Hide();
     $winConfig->chDomainName->Hide();
-    $winConfig->lblWhois->Hide();
-    $winConfig->lblNsLookupTO1->Hide();
-    $winConfig->tfLookupTO->Hide();
-    $winConfig->lblNsLookupTO2->Hide();
     # Storage tab
     $winConfig->lblReport->Show();
     $winConfig->tfReportDir->Show();
@@ -5444,15 +5486,18 @@ sub configTab_Click
     $winConfig->btnCheckUpdate->Hide();
     $winConfig->chAutoUpdate->Hide();
     $winConfig->btnExportLang->Hide();
+    $winConfig->lblGeneral->Hide();
+    $winConfig->chStartMinimized->Hide();
+    $winConfig->lblNsLookupTO1->Hide();
+    $winConfig->tfLookupTO->Hide();
+    $winConfig->lblNsLookupTO2->Hide();
+    $winConfig->lblUserAgent->Hide();
+    $winConfig->tfUserAgent->Hide();
     $winConfig->lblParser->Hide();
     $winConfig->chIPv4->Hide();
     $winConfig->chIPv6->Hide();
     $winConfig->chHostname->Hide();
     $winConfig->chDomainName->Hide();
-    $winConfig->lblWhois->Hide();
-    $winConfig->lblNsLookupTO1->Hide();
-    $winConfig->tfLookupTO->Hide();
-    $winConfig->lblNsLookupTO2->Hide();
     # Storage tab
     $winConfig->lblReport->Hide();
     $winConfig->tfReportDir->Hide();
@@ -5503,12 +5548,12 @@ sub configTab_Click
 sub btnCheckUpdate_Click
 #--------------------------#
 {
-  &checkUpdate(1);
+  &updateTool(1);
 
 }  #--- End btnCheckUpdate_Click
 
 #--------------------------#
-sub checkUpdate
+sub updateTool
 #--------------------------#
 {
   # Local variables
@@ -5516,7 +5561,7 @@ sub checkUpdate
   
   # Download the version file  
   my $ua = new LWP::UserAgent;
-  $ua->agent('XL-WhoisUpdate $VERSION');
+  $ua->agent('XL-Whois Update $VERSION');
   $ua->default_header('Accept-Language' => 'en');
   my $req = new HTTP::Request GET => $URL_VER;
   my $res = $ua->request($req);
@@ -5532,33 +5577,28 @@ sub checkUpdate
     } else {
       my $answer = Win32::GUI::MessageBox($winConfig, "$STR{'update4'} $currVer $STR{'update5'} ?", $STR{'update3'}, 0x40024); # Download available
       # Download the update
-      if ($answer == 6) { &update; }
+      if ($answer == 6) {
+        # Open Firefox to XL-Whois page
+        $win->ShellExecute('open', $URL_TOOL,'','',1) or
+          Win32::GUI::MessageBox($winConfig, Win32::FormatMessage(Win32::GetLastError()), $STR{'error'},0x40010);
+      }
     }
   }
   # Error 
   else {
-    my $status  = $res->code;
-    my $error   = $res->status_line;
+    my $status = $res->code;
+    my $error  = $res->status_line;
     Win32::GUI::MessageBox($winConfig, "$STR{'error'}: $STR{'update6'} = [$status]; $STR{'update7'} = [$error].", $STR{'err7'},0x40010);
   }
 
-}  #--- End checkUpdate
-
-#--------------------------#
-sub update
-#--------------------------#
-{
-  # Open Firefox to XL-Whois page
-  $win->ShellExecute('open', $URL_TOOL,'','',1) or Win32::GUI::MessageBox($winConfig, Win32::FormatMessage(Win32::GetLastError()), $STR{'error'},0x40010);
-
-}  #--- End update
+}  #--- End updateTool
 
 #--------------------------#
 sub chAutoUpdate_Click
 #--------------------------#
 {
   # Save the choice
-  if ($winConfig->chAutoUpdate->Checked() == 1) {
+  if ($winConfig->chAutoUpdate->Checked()) {
     $CONFIG{'TOOL_AUTO_UPDATE'} = 1;
     &saveConfig(\%CONFIG);
   } else {
@@ -5587,7 +5627,7 @@ sub chIPv4_Click
 #--------------------------#
 {
   # Save the choice
-  if ($winConfig->chIPv4->Checked() == 1) {
+  if ($winConfig->chIPv4->Checked()) {
     $CONFIG{'OPT_IPv4'} = 1;
     &saveConfig(\%CONFIG);
   } else {
@@ -5596,7 +5636,7 @@ sub chIPv4_Click
   }
   
   # Ready ?
-  &isWhoisReady();
+  &isWhoisReady(0);
 
 }  #--- End chIPv4_Click
 
@@ -5605,7 +5645,7 @@ sub chIPv6_Click
 #--------------------------#
 {
   # Save the choice
-  if ($winConfig->chIPv6->Checked() == 1) {
+  if ($winConfig->chIPv6->Checked()) {
     $CONFIG{'OPT_IPv6'} = 1;
     &saveConfig(\%CONFIG);
   } else {
@@ -5614,7 +5654,7 @@ sub chIPv6_Click
   }
   
   # Ready ?
-  &isWhoisReady();
+  &isWhoisReady(0);
 
 }  #--- End chIPv6_Click
 
@@ -5623,7 +5663,7 @@ sub chHostname_Click
 #--------------------------#
 {
   # Save the choice
-  if ($winConfig->chHostname->Checked() == 1) {
+  if ($winConfig->chHostname->Checked()) {
     $CONFIG{'OPT_HOSTNAME'} = 1;
     &saveConfig(\%CONFIG);
   } else {
@@ -5632,7 +5672,7 @@ sub chHostname_Click
   }
   
   # Ready ?
-  &isWhoisReady();
+  &isWhoisReady(0);
 
 }  #--- End chHostname_Click
 
@@ -5641,7 +5681,7 @@ sub chDomainName_Click
 #--------------------------#
 {
   # Save the choice
-  if ($winConfig->chDomainName->Checked() == 1) {
+  if ($winConfig->chDomainName->Checked()) {
     $CONFIG{'OPT_DOMAIN_NAME'} = 1;
     &saveConfig(\%CONFIG);
   } else {
@@ -5650,9 +5690,24 @@ sub chDomainName_Click
   }
   
   # Ready ?
-  &isWhoisReady();
+  &isWhoisReady(0);
 
 }  #--- End chDomainName_Click
+
+#--------------------------#
+sub chStartMinimized_Click
+#--------------------------#
+{
+  # Save the choice
+  if ($winConfig->chStartMinimized->Checked()) {
+    $CONFIG{'START_MINIMIZED'} = 1;
+    &saveConfig(\%CONFIG);
+  } else {
+    $CONFIG{'START_MINIMIZED'} = 0;
+    &saveConfig(\%CONFIG);
+  }
+
+}  #--- End chStartMinimized_Click
 
 #--------------------------#
 sub tfLookupTO_Change
@@ -5663,18 +5718,33 @@ sub tfLookupTO_Change
   
   # Remember
   if ($lookupTO) {
-      $CONFIG{'NSLOOKUP_TIMEOUT'} = $lookupTO;
-      &saveConfig(\%CONFIG);
+    $CONFIG{'NSLOOKUP_TIMEOUT'} = $lookupTO;
+    &saveConfig(\%CONFIG);
   }
 
 }  #--- End tfLookupTO_Change
+
+#--------------------------#
+sub tfUserAgent_Change
+#--------------------------#
+{
+  # Local variables
+  my $userAgent = $winConfig->tfUserAgent->Text();
+  
+  # Remember
+  if ($userAgent) {
+    $CONFIG{'USERAGENT'} = $userAgent;
+    &saveConfig(\%CONFIG);
+  }
+
+}  #--- End tfUserAgent_Change
 
 #--------------------------#
 sub chAutoViewing_Click
 #--------------------------#
 {
   # Save the choice
-  if ($winConfig->chAutoViewing->Checked() == 1) {
+  if ($winConfig->chAutoViewing->Checked()) {
     $CONFIG{'AUTO_VIEWING'} = 1;
     &saveConfig(\%CONFIG);
   } else {
@@ -5713,7 +5783,7 @@ sub tfReportDir_Change
   }
   
   # Ready ?
-  if ($START == 1) { &isWhoisReady(); }
+  if ($START == 1) { &isWhoisReady(0); }
 
 }  #--- End tfReportDir_Change
 
@@ -5748,7 +5818,7 @@ sub btnReportDir_Click
   }
   
   # Ready ?
-  &isWhoisReady();
+  &isWhoisReady(0);
   
 }  #--- End btnReportDir_Click
 
@@ -5776,7 +5846,7 @@ sub chReplace_Click
 #--------------------------#
 {
   # Save the choice
-  if ($winConfig->chReplace->Checked() == 1) {
+  if ($winConfig->chReplace->Checked()) {
     $CONFIG{'REPORT_REPLACE'} = 1;
     &saveConfig(\%CONFIG);
   } else {
@@ -5791,7 +5861,7 @@ sub chAutoViewDir_Click
 #--------------------------#
 {
   # Save the choice
-  if ($winConfig->chAutoViewDir->Checked() == 1) {
+  if ($winConfig->chAutoViewDir->Checked()) {
     $CONFIG{'AUTO_VIEW_DIR'} = 1;
     &saveConfig(\%CONFIG);
   } else {
@@ -5806,7 +5876,7 @@ sub chLogActivate_Click
 #--------------------------#
 {
   # Save the choice
-  if ($winConfig->chLogActivate->Checked() == 1) {
+  if ($winConfig->chLogActivate->Checked()) {
     $CONFIG{'LOGGING'} = 1;
     &saveConfig(\%CONFIG);
     $win->tfComment->Enable();
@@ -5964,7 +6034,7 @@ sub chDBCache_Click
 #--------------------------#
 {
   # Save the choice
-  if ($winConfig->chDBCache->Checked() == 1) {
+  if ($winConfig->chDBCache->Checked()) {
     $CONFIG{'WHOIS_CACHE'} = 1;
     &saveConfig(\%CONFIG);
   } else {
@@ -5998,7 +6068,7 @@ sub tfDbFile_Change
         $winConfig->tfDbFile->Text('');
       }
       # Ready ?
-      if ($START == 1) { &isWhoisReady(); }
+      if ($START == 1) { &isWhoisReady(0); }
     });
   }
 
@@ -6021,6 +6091,7 @@ sub btnDbFile_Click
     $dbFile = $winConfig->GetOpenFileName(  -owner         => $winConfig              ,
                                             -title         => $STR{'btnDbFileTip'}.':',
                                             -defaultfilter => 0                       ,
+                                            -file          => 'Whois.db'              ,
                                             -filemustexist => 1                       ,
                                             -directory     => $lastDir                ,
                                             -explorer      => 1                       , );
@@ -6028,6 +6099,7 @@ sub btnDbFile_Click
     $dbFile = $winConfig->GetOpenFileName(  -owner         => $winConfig              ,
                                             -title         => $STR{'btnDbFileTip'}.':',
                                             -defaultfilter => 0                       ,
+                                            -file          => 'Whois.db'              ,
                                             -filemustexist => 1                       ,
                                             -explorer      => 1                       , );
   }
@@ -6036,7 +6108,7 @@ sub btnDbFile_Click
   if ($dbFile and -f $dbFile) { $winConfig->tfDbFile->Text($dbFile); }
 
   # Ready ?
-  &isWhoisReady();
+  &isWhoisReady(0);
 
 }  #--- End btnDbFile_Click
 
@@ -6044,13 +6116,13 @@ sub btnDbFile_Click
 sub btnDbFileNew_Click
 #--------------------------#
 {
-  my $dbFile = $winConfig->GetOpenFileName( -owner            => $winConfig           ,
+  my $dbFile = $winConfig->GetOpenFileName( -owner            => $winConfig          ,
                                             -title            => $STR{'btnDbFileNew'},
-                                            -defaultfilter    => 0              ,
-                                            -directory        => $PROGDIR       ,
-                                            -file             => 'Whois.db'     ,
-                                            -defaultextension => 'db'           ,
-                                            -explorer         => 1              , );
+                                            -defaultfilter    => 0                   ,
+                                            -directory        => $PROGDIR            ,
+                                            -file             => 'Whois.db'          ,
+                                            -defaultextension => 'db'                ,
+                                            -explorer         => 1                   , );
 
   # Selected file
   if ($dbFile) {
@@ -6067,7 +6139,7 @@ sub btnDbFileNew_Click
   }
 
   # Ready ?
-  &isWhoisReady();
+  &isWhoisReady(0);
 
 }  #--- End btnDbFileNew_Click
 
@@ -6126,7 +6198,7 @@ sub chTLDDBAutoUpt_Click
 #--------------------------#
 {
   # Save the choice
-  if ($winConfig->chTLDDBAutoUpt->Checked() == 1) {
+  if ($winConfig->chTLDDBAutoUpt->Checked()) {
     $CONFIG{'TLD_DB_AUTO_UPDATE'} = 1;
     &saveConfig(\%CONFIG);
   } else {
@@ -6203,7 +6275,7 @@ sub btnTLDDB_Click
 sub btnTLDDBUpt_Click
 #--------------------------#
 {
-  threads->create(sub { &checkTLDDB(1); });
+  threads->create(sub { &updateTLDDB(1); });
   return(1);
   
 }  #--- End btnTLDDBUpt_Click
@@ -6213,7 +6285,7 @@ sub chWSDBAutoUpt_Click
 #--------------------------#
 {
   # Save the choice
-  if ($winConfig->chWSDBAutoUpt->Checked() == 1) {
+  if ($winConfig->chWSDBAutoUpt->Checked()) {
     $CONFIG{'WS_DB_AUTO_UPDATE'} = 1;
     &saveConfig(\%CONFIG);
   } else {
@@ -6290,7 +6362,7 @@ sub btnWSDB_Click
 sub btnWSDBUpt_Click
 #--------------------------#
 {
-  threads->create(sub { &checkWSDB(1); });
+  threads->create(sub { &updateWSDB(1); });
   return(1);
   
 }  #--- End btnWSDBUpt_Click
@@ -6300,7 +6372,7 @@ sub chIPv4DBAutoUpt_Click
 #--------------------------#
 {
   # Save the choice
-  if ($winConfig->chIPv4DBAutoUpt->Checked() == 1) {
+  if ($winConfig->chIPv4DBAutoUpt->Checked()) {
     $CONFIG{'IPv4_DB_AUTO_UPDATE'} = 1;
     &saveConfig(\%CONFIG);
   } else {
@@ -6422,7 +6494,7 @@ sub btnIPv4DB_Click
 sub btnIPv4DBUpt_Click
 #--------------------------#
 {
-  threads->create(sub { &checkIPv4DB(1); });
+  threads->create(sub { &updateIPv4DB(1); });
   return(1);
   
 }  #--- End btnIPv4DBUpt_Click
@@ -6432,7 +6504,7 @@ sub chIPv6DBAutoUpt_Click
 #--------------------------#
 {
   # Save the choice
-  if ($winConfig->chIPv6DBAutoUpt->Checked() == 1) {
+  if ($winConfig->chIPv6DBAutoUpt->Checked()) {
     $CONFIG{'IPv6_DB_AUTO_UPDATE'} = 1;
     &saveConfig(\%CONFIG);
   } else {
@@ -6553,95 +6625,17 @@ sub btnIPv6DB_Click
 sub btnIPv6DBUpt_Click
 #--------------------------#
 {
-  threads->create(sub { &checkIPv6DB(1); });
+  threads->create(sub { &updateIPv6DB(1); });
   return(1);
   
 }  #--- End btnIPv6DBUpt_Click
 
 #--------------------------#
-sub btnUpdateYes_Click
-#--------------------------#
-{
-  &winUpdate_Terminate;
-  # Update TLDDB
-  if    ($UPDATE_FLAG == 1) {
-    my $localTLDDB    = $winConfig->tfTLDDB->Text();
-    if (!$localTLDDB) { $localTLDDB = "$PROGDIR\\effective_tld_names.dat"; } # Default location
-    my $return        = &downloadTLDDB($localTLDDB);
-    # Success
-    if ($return) {
-      $winConfig->tfTLDDB->Text($localTLDDB);
-      Win32::GUI::MessageBox($winConfig, $STR{'updatedDB'}, $STR{'updateTLDDB'}, 0x40040);
-    # Error
-    } else { Win32::GUI::MessageBox($winConfig, $STR{'errDownloadingDB'}, $STR{'error'}, 0x40010); }
-  }
-  # Update WSDB
-  elsif ($UPDATE_FLAG == 2) {
-    my $localWSDB     = $winConfig->tfWSDB->Text();
-    if (!$localWSDB)  { $localWSDB = "$PROGDIR\\tld.json"; } # Default location
-    my $return        = &downloadWSDB($localWSDB);
-    # Success
-    if ($return) {
-      $winConfig->tfWSDB->Text($localWSDB);
-      Win32::GUI::MessageBox($winConfig, $STR{'updatedDB'}, $STR{'updateWSDB'}, 0x40040);
-    # Error
-    } else { Win32::GUI::MessageBox($winConfig, $STR{'errDownloadingDB'}, $STR{'error'}, 0x40010); }
-  }
-  # Update IPv4
-  elsif ($UPDATE_FLAG == 3) {
-    my $localIPv4DB    = $winConfig->tfIPv4DB->Text();
-    if (!$localIPv4DB) { $localIPv4DB = "$PROGDIR\\ipv4-address-space.csv"; } # Default location
-    my $return         = &downloadIPv4DB($localIPv4DB);
-    # Success
-    if ($return) {
-      $winConfig->tfIPv4DB->Text($localIPv4DB);
-      Win32::GUI::MessageBox($winConfig, $STR{'updatedDB'}, $STR{'updateIPv4DB'}, 0x40040);
-    # Error
-    } else { Win32::GUI::MessageBox($winConfig, $STR{'errDownloadingDB'}, $STR{'error'}, 0x40010); }
-  }
-  # Update IPv6
-  elsif ($UPDATE_FLAG == 4) {
-    my $localIPv6DB    = $winConfig->tfIPv6DB->Text();
-    if (!$localIPv6DB) { $localIPv6DB = "$PROGDIR\\ipv6-unicast-address-assignments.csv"; } # Default location
-    my $return         = &downloadIPv6DB($localIPv6DB);
-    # Success
-    if ($return) {
-      $winConfig->tfIPv6DB->Text($localIPv6DB);
-      Win32::GUI::MessageBox($winConfig, $STR{'updatedDB'}, $STR{'updateIPv6DB'}, 0x40040);
-    # Error
-    } else { Win32::GUI::MessageBox($winConfig, $STR{'errDownloadingDB'}, $STR{'error'}, 0x40010); }
-  }
-  $UPDATE_FLAG = 0;
-
-}  #--- End btnUpdateYes_Click
-
-#--------------------------#
-sub btnUpdateNo_Click
-#--------------------------#
-{
-  # Update TLDDB or WSDB
-  &winUpdate_Terminate;
-
-}  #--- End btnUpdateNo_Click
-
-#--------------------------#
-sub checkTLDDB
+sub updateTLDDB
 #--------------------------#
 {
   # Local variables
 	my $confirm = shift;
-  
-  # If $confirm == 1, Show Update Window (check update in progress...)
-  if ($confirm) {
-    $winUpdate->lblUpdateErr->Hide;
-    $winUpdate->btnUpdateYes->Hide;
-    $winUpdate->btnUpdateNo->Hide;
-    $winUpdate->lblUpdateLogo->Show;
-    $winUpdate->Text($STR{'updateTLDDB'});
-    $winUpdate->lblUpdateMsg->Text($STR{'btnTLDDBUptTip'}.'...');
-    $winUpdate->Center($win);
-    $winUpdate->Show();
-  }
   
   my ($upToDate, $return, $dateLocalFile, $dateRemoteFile) = &checkDateTLDDB($confirm);
   # Values for $upToDate
@@ -6653,51 +6647,35 @@ sub checkTLDDB
 
   # TLD Database is outdated or doesn't exist
   if (!$upToDate or $upToDate == 2) {
-    # Show Update Window to display update available
-    # If $confirm == 1, Update Window is already displayed
-    if (!$confirm) {
-      $winUpdate->lblUpdateErr->Hide;
-      $winUpdate->btnUpdateYes->Hide;
-      $winUpdate->btnUpdateNo->Hide;
-      $winUpdate->lblUpdateLogo->Show;
-      $winUpdate->Text($STR{'updateTLDDB'});
-      $winUpdate->lblUpdateMsg->Text($STR{'btnTLDDBUptTip'}.'...');
-      $winUpdate->Center($win);
-      $winUpdate->Show();
-    }
-    # Download update ?
-    $winUpdate->btnUpdateOk->Hide;
-    $winUpdate->btnUpdateYes->Show;
-    $winUpdate->btnUpdateNo->Show;
     my $msg;
     if ($dateLocalFile and $dateRemoteFile) {
       Encode::from_to($dateRemoteFile, 'utf8', 'iso-8859-1');
       $msg = "$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} publicsuffix.org: $dateRemoteFile\n\n$STR{'updateAvailable'} ?";
     } else { $msg = "$STR{'TLDDBNotExist'} ?"; }
-    $winUpdate->lblUpdateMsg->Text($msg);
-    $UPDATE_FLAG = 1;
+    
+    # Yes (6), No (7)
+    my $answer = Win32::GUI::MessageBox($win, $msg, $STR{'updateTLDDB'}, 0x1024);
+    
+    # Answer is No
+    if ($answer == 7) { return(0); }
+    
+    # Answer is Yes, download the update
+    else { &downloadTLDDB(); }
     
   # TLDDB is up to date, show message if $confirm == 1
   } elsif ($upToDate == 1) {
     if ($confirm) {
-      $winUpdate->btnUpdateYes->Hide;
-      $winUpdate->btnUpdateNo->Hide;
-      $winUpdate->btnUpdateOk->Show;
       Encode::from_to($dateRemoteFile, 'utf8', 'iso-8859-1');
-      $winUpdate->lblUpdateMsg->Text("$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} publicsuffix.org: $dateRemoteFile\n\n$STR{'DBUpToDate'} !");
+      Win32::GUI::MessageBox($win,  "$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} publicsuffix.org: ".
+                                    "$dateRemoteFile\n\n$STR{'DBUpToDate'} !", $STR{'updateTLDDB'}, 0x40040);
     }
   # Connection error, show message if $confirm == 1
   } elsif (($upToDate == 3 or $upToDate == 4) and $confirm) {
-    $winUpdate->btnUpdateYes->Hide;
-    $winUpdate->btnUpdateNo->Hide;
-    $winUpdate->btnUpdateOk->Show;
-    $winUpdate->lblUpdateLogo->Hide;
-    $winUpdate->lblUpdateErr->Show;
-    if ($upToDate == 3) { $winUpdate->lblUpdateMsg->Text("$STR{'errConnection'}: $return"); }
-    else                { $winUpdate->lblUpdateMsg->Text("$STR{'errUnknown'}: $return");    }
+    if ($upToDate == 3) { Win32::GUI::MessageBox($win, "$STR{'errConnection'}: $return", $STR{'error'}, 0x40010); }
+    else                { Win32::GUI::MessageBox($win, "$STR{'errUnknown'}: $return", $STR{'error'}   , 0x40010); }
   }
 
-}  #--- End checkTLDDB
+}  #--- End updateTLDDB
 
 #--------------------------#
 sub checkDateTLDDB
@@ -6706,7 +6684,6 @@ sub checkDateTLDDB
   # Local variables
   my ($confirm)   = @_;
   my $localTLDDB  = $winConfig->tfTLDDB->Text();
-  my @month       = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
   my $lastModifDate;
   
   # TLD Database doesn't exist or invalid file
@@ -6719,32 +6696,29 @@ sub checkDateTLDDB
 
   # Check date of the remote file
   my $ua = new LWP::UserAgent;
-  $ua->agent($USERAGENT);
+  $ua->agent($CONFIG{'USERAGENT'});
   $ua->default_header('Accept-Language' => 'en');
   my $req    = new HTTP::Request HEAD => $TLDDB_URL;
   my $res    = $ua->request($req);
   my $return = $res->status_line;
   if ($res->code == 200) {
     $lastModifDate = $res->header('last-modified');
+    $TOTAL_SIZE    = $res->header('content_length');
   } else { return(3, $return, undef, undef); } # Error connection
   
   # Compare local et remote file date
-  if ($lastModifDate) {
-    my $date = new Date::Manip::Date;
-    my $err  = $date->parse($lastModifDate);
-    if (!$err) {
-      my $dateUpt = $date->printf('%Y-%m-%d');
-      my ($yd, $md, $dd)  = split(/-/, $dateUpt);
-      if    ($yl  > $yd) { return(1, $return, $dateLocalFile, $dateUpt);   } # TLDDB is up to date
-      elsif ($yl == $yd) { # Same year
-        if ($ml > $md)     { return(1, $return, $dateLocalFile, $dateUpt); } # TLDDB is up to date
-        elsif ($ml == $md) { # Same month
-          if ($dl >= $dd) { return(1, $return, $dateLocalFile, $dateUpt);  } # TLDDB is up to date
-          else            { return(2, $return, $dateLocalFile, $dateUpt);  } # TLDDB is outdated
-        } else { return(2, $return, $dateLocalFile, $dateUpt); }             # TLDDB is outdated
-      } else { return(2, $return, $dateLocalFile, $dateUpt); }               # TLDDB is outdated
-    } else { return(4, $return, undef, undef); }                					   # Unknown error
-  } else { return(3, $return, undef, undef); }                  					   # Connection error
+  if ($lastModifDate and my ($y, $m, $d) = parse_date($lastModifDate)) { # Parse date
+    my $dateUpt = sprintf("%4d-%02d-%02d", $y, $m, $d);
+    my ($yd, $md, $dd)  = split(/-/, $dateUpt);
+    if    ($yl  > $yd) { return(1, $return, $dateLocalFile, $dateUpt);   } # TLDDB is up to date
+    elsif ($yl == $yd) { # Same year
+      if ($ml > $md)     { return(1, $return, $dateLocalFile, $dateUpt); } # TLDDB is up to date
+      elsif ($ml == $md) { # Same month
+        if ($dl >= $dd) { return(1, $return, $dateLocalFile, $dateUpt);  } # TLDDB is up to date
+        else            { return(2, $return, $dateLocalFile, $dateUpt);  } # TLDDB is outdated
+      } else { return(2, $return, $dateLocalFile, $dateUpt); }             # TLDDB is outdated
+    } else { return(2, $return, $dateLocalFile, $dateUpt); }               # TLDDB is outdated
+  } else { return(3, $return, undef, undef); }                  				   # Connection error
 
 }  #--- End checkDateTLDDB
 
@@ -6753,33 +6727,108 @@ sub downloadTLDDB
 #--------------------------#
 {
   # Local variables
-  my $localTLDDB = shift;
+  my $localTLDDB    = $winConfig->tfTLDDB->Text();
+  if (!$localTLDDB) { $localTLDDB = "$PROGDIR\\effective_tld_names.dat"; } # Default location
 
-  # Download Database
-  if (is_success(getstore($TLDDB_URL, $localTLDDB))) { return(1); }
-  # Error download
-  else { return(0); }
+  # Start an agent
+  my $ua = new LWP::UserAgent;
+  $ua->agent($CONFIG{'USERAGENT'});
+  $ua->default_header('Accept-Language' => 'en');
+  
+  # Set the progress bar
+  $win->ChangeCursor($HOURGLASS);
+  $winPb->lblPbCurr->Text($STR{'connecting'}.' publicsuffix.org...');
+  $winPb->lblCount->Text("0 %");
+  $winPb->pbWinPb->SetRange(0, 100);
+  $winPb->pbWinPb->SetPos(0);
+  $winPb->pbWinPb->SetStep(1);
+  $winPb->Center($win);
+  $winPb->Show();
+  
+  # Check size of the remote file
+  if (!$TOTAL_SIZE) {
+    my $req    = new HTTP::Request HEAD => $TLDDB_URL;
+    my $res    = $ua->request($req);
+    my $return = $res->status_line;
+    if ($res->code == 200) { $TOTAL_SIZE = $res->header('content_length'); }
+    else {
+      Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errorConRemote'}...", $STR{'error'}, 0x40010);
+      # Turn off progress bar
+      $win->ChangeCursor($ARROW);
+      $winPb->lblPbCurr->Text('');
+      $winPb->lblCount->Text('');
+      $winPb->pbWinPb->SetPos(0);
+      &winPb_Terminate;
+    }
+  }
+  
+  # Download the file
+  if ($TOTAL_SIZE) {
+    my $downloadData;
+    
+    # Download the file
+    $winPb->Text($STR{'downloadTLDDB'}.'...');
+    $winPb->lblPbCurr->Text($STR{'downloadTLDDB'}.'...');
+    my $response = $ua->get($TLDDB_URL, ':content_cb' => sub {
+      # Local variables
+      my ($data, $response, $protocol) = @_;
+      
+      $downloadData       .= $data;                                     # Downloaded data
+      my $totalDownloaded  = length($downloadData);                     # Size of downloaded data
+      my $completed        = int($totalDownloaded / $TOTAL_SIZE * 100); # Pourcentage of download completed
+      
+      $winPb->pbWinPb->SetPos($completed);    # Set the progress bar
+      $winPb->lblCount->Text("$completed %"); # Indicate purcentage
+    });
+    
+    # Save data in a file
+    if ($response and $response->is_success) {
+      open(TLDDB,">$localTLDDB");
+      print TLDDB $downloadData;
+      close(TLDDB);
+    }
+    $downloadData = undef;
+    
+    # Finished
+    if (-T $localTLDDB) {
+      $winConfig->tfTLDDB->Text($localTLDDB);
+      # Turn off progress bar
+      $win->ChangeCursor($ARROW);
+      $winPb->lblPbCurr->Text('');
+      $winPb->lblCount->Text('');
+      $winPb->pbWinPb->SetPos(0);
+      &winPb_Terminate;
+      Win32::GUI::MessageBox($winConfig, $STR{'updatedTLDDB'}, $STR{'updateTLDDB'}, 0x40040);
+    } else {
+      Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadTLDDB'}...", $STR{'error'}, 0x40010);
+      # Turn off progress bar
+      $win->ChangeCursor($ARROW);
+      $winPb->lblPbCurr->Text('');
+      $winPb->lblCount->Text('');
+      $winPb->pbWinPb->SetPos(0);
+      &winPb_Terminate;
+  }
+
+  } else {
+    Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadTLDDB'}...", $STR{'error'}, 0x40010);
+    # Turn off progress bar
+    $win->ChangeCursor($ARROW);
+    $winPb->lblPbCurr->Text('');
+    $winPb->lblCount->Text('');
+    $winPb->pbWinPb->SetPos(0);
+    &winPb_Terminate;
+  }
+  
+  $TOTAL_SIZE = 0;
   
 }  #--- End downloadTLDDB
 
 #--------------------------#
-sub checkWSDB
+sub updateWSDB
 #--------------------------#
 {
   # Local variables
 	my $confirm = shift;
-  
-  # If $confirm == 1, Show Update Window (check update in progress...)
-  if ($confirm) {
-    $winUpdate->lblUpdateErr->Hide;
-    $winUpdate->btnUpdateYes->Hide;
-    $winUpdate->btnUpdateNo->Hide;
-    $winUpdate->lblUpdateLogo->Show;
-    $winUpdate->Text($STR{'updateWSDB'});
-    $winUpdate->lblUpdateMsg->Text($STR{'btnWSDBUptTip'}.'...');
-    $winUpdate->Center($win);
-    $winUpdate->Show();
-  }
   
   my ($upToDate, $return, $dateLocalFile, $dateRemoteFile) = &checkDateWSDB($confirm);
   # Values for $upToDate
@@ -6791,51 +6840,35 @@ sub checkWSDB
 
   # Whois Server Database is outdated or doesn't exist
   if (!$upToDate or $upToDate == 2) {
-    # Show Update Window to display update available
-    # If $confirm == 1, Update Window is already displayed
-    if (!$confirm) {
-      $winUpdate->lblUpdateErr->Hide;
-      $winUpdate->btnUpdateYes->Hide;
-      $winUpdate->btnUpdateNo->Hide;
-      $winUpdate->lblUpdateLogo->Show;
-      $winUpdate->Text($STR{'updateWSDB'});
-      $winUpdate->lblUpdateMsg->Text($STR{'btnWSDBUptTip'}.'...');
-      $winUpdate->Center($win);
-      $winUpdate->Show();
-    }
-    # Download update ?
-    $winUpdate->btnUpdateOk->Hide;
-    $winUpdate->btnUpdateYes->Show;
-    $winUpdate->btnUpdateNo->Show;
     my $msg;
     if ($dateLocalFile and $dateRemoteFile) {
       Encode::from_to($dateRemoteFile, 'utf8', 'iso-8859-1');
       $msg = "$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} github.com (weppos): $dateRemoteFile\n\n$STR{'updateAvailable'} ?";
     } else { $msg = "$STR{'WSDBNotExist'} ?"; }
-    $winUpdate->lblUpdateMsg->Text($msg);
-    $UPDATE_FLAG = 2;
+    
+    # Yes (6), No (7)
+    my $answer = Win32::GUI::MessageBox($win, $msg, $STR{'updateWSDB'}, 0x1024);
+    
+    # Answer is No
+    if ($answer == 7) { return(0); }
+    
+    # Answer is Yes, download the update
+    else { &downloadWSDB(); }
     
   # WSDB is up to date, show message if $confirm == 1
   } elsif ($upToDate == 1) {
     if ($confirm) {
-      $winUpdate->btnUpdateYes->Hide;
-      $winUpdate->btnUpdateNo->Hide;
-      $winUpdate->btnUpdateOk->Show;
       Encode::from_to($dateRemoteFile, 'utf8', 'iso-8859-1');
-      $winUpdate->lblUpdateMsg->Text("$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} github.com (weppos): $dateRemoteFile\n\n$STR{'DBUpToDate'} !");
+      Win32::GUI::MessageBox($win,  "$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} github.com (weppos): ".
+                                    "$dateRemoteFile\n\n$STR{'DBUpToDate'} !", $STR{'updateWSDB'}, 0x40040);
     }
   # Connection error, show message if $confirm == 1
   } elsif (($upToDate == 3 or $upToDate == 4) and $confirm) {
-    $winUpdate->btnUpdateYes->Hide;
-    $winUpdate->btnUpdateNo->Hide;
-    $winUpdate->btnUpdateOk->Show;
-    $winUpdate->lblUpdateLogo->Hide;
-    $winUpdate->lblUpdateErr->Show;
-    if ($upToDate == 3) { $winUpdate->lblUpdateMsg->Text("$STR{'errConnection'}: $return"); }
-    else                { $winUpdate->lblUpdateMsg->Text("$STR{'errUnknown'}: $return");    }
+    if ($upToDate == 3) { Win32::GUI::MessageBox($win, "$STR{'errConnection'}: $return", $STR{'error'}, 0x40010); }
+    else                { Win32::GUI::MessageBox($win, "$STR{'errUnknown'}: $return", $STR{'error'}   , 0x40010); }
   }
 
-}  #--- End checkWSDB
+}  #--- End updateWSDB
 
 #--------------------------#
 sub checkDateWSDB
@@ -6844,9 +6877,7 @@ sub checkDateWSDB
   # Local variables
   my ($confirm)   = @_;
   my $localWSDB   = $winConfig->tfWSDB->Text();
-  my @month       = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
   my $lastModifDate;
-  my $remoteEtag;
   
   # if no database
   if (!$localWSDB or !-f $localWSDB) { return(0, undef, undef, undef); }
@@ -6858,42 +6889,29 @@ sub checkDateWSDB
 
   # Check date of the remote file
   my $ua = new LWP::UserAgent;
-  $ua->agent($USERAGENT);
+  $ua->agent($CONFIG{'USERAGENT'});
   $ua->default_header('Accept-Language' => 'en');
-  my $req    = new HTTP::Request HEAD => $WSDB_URL;
+  my $req    = new HTTP::Request GET => $WSLOG_URL;
   my $res    = $ua->request($req);
   my $return = $res->status_line;
   if ($res->code == 200) {
-    $lastModifDate = $res->header('last-modified');
-    $remoteEtag    = $res->header('etag');
+    if ($res->content =~ /datetime="([^\"]+)"/) { $lastModifDate = $1; }
+    $TOTAL_SIZE = $res->header('content_length');
   } else { return(3, $return, undef, undef); } # Error connection
   
   # Compare local and remote file date
-  if ($lastModifDate) {
-    my $date = new Date::Manip::Date;
-    my $err  = $date->parse($lastModifDate);
-    if (!$err) {
-      my $dateUpt = $date->printf('%Y-%m-%d');
-      my ($yd, $md, $dd)  = split(/-/, $dateUpt);
-      if    ($yl  > $yd) { return(1, $return, $dateLocalFile, $dateUpt);   } # WSDB is up to date
-      elsif ($yl == $yd) { # Same year
-        if ($ml > $md)     { return(1, $return, $dateLocalFile, $dateUpt); } # WSDB is up to date
-        elsif ($ml == $md) { # Same month
-          if ($dl >= $dd) { return(1, $return, $dateLocalFile, $dateUpt);  } # WSDB is up to date
-          else            { return(2, $return, $dateLocalFile, $dateUpt);  } # WSDB is outdated
-        } else { return(2, $return, $dateLocalFile, $dateUpt); }             # WSDB is outdated
-      } else { return(2, $return, $dateLocalFile, $dateUpt); }               # WSDB is outdated
-    } else { return(4, $return, undef, undef); }                					   # Unknown error
-    
-  # No date but Etag
-  } elsif (!$lastModifDate and $remoteEtag) {
-    # Compare Etag
-    if ($CONFIG{'CURR_WSDB_ETAG'} and $CONFIG{'CURR_WSDB_ETAG'} eq $remoteEtag) {
-      return(1, $return, $dateLocalFile, 'See Github'); # WSDB is up to date
-    }
-    # No Etag or Curr Etag is different of Remote
-    return(2, $return, $dateLocalFile, 'See Github'); # WSDB is outdated
-  } else { return(3, $return, undef, undef); }        # Connection error
+  if ($lastModifDate and my ($y, $m, $d) = parse_date($lastModifDate)) {   # Parse date
+    my $dateUpt = sprintf("%4d-%02d-%02d", $y, $m, $d);
+    my ($yd, $md, $dd)  = split(/-/, $dateUpt);
+    if    ($yl  > $yd) { return(1, $return, $dateLocalFile, $dateUpt);   } # WSDB is up to date
+    elsif ($yl == $yd) { # Same year
+      if ($ml > $md)     { return(1, $return, $dateLocalFile, $dateUpt); } # WSDB is up to date
+      elsif ($ml == $md) { # Same month
+        if ($dl >= $dd) { return(1, $return, $dateLocalFile, $dateUpt);  } # WSDB is up to date
+        else            { return(2, $return, $dateLocalFile, $dateUpt);  } # WSDB is outdated
+      } else { return(2, $return, $dateLocalFile, $dateUpt); }             # WSDB is outdated
+    } else { return(2, $return, $dateLocalFile, $dateUpt); }               # WSDB is outdated
+  } else { return(3, $return, undef, undef); }                             # Connection error
 
 }  #--- End checkDateWSDB
 
@@ -6902,45 +6920,108 @@ sub downloadWSDB
 #--------------------------#
 {
   # Local variables
-  my $localWSDB = shift;
-
-  # Download Database
-  if (is_success(getstore($WSDB_URL, $localWSDB))) {
-    # Update Etag
-    my $ua = new LWP::UserAgent;
-    $ua->agent($USERAGENT);
-    $ua->default_header('Accept-Language' => 'en');
+  my $localWSDB     = $winConfig->tfWSDB->Text();
+  if (!$localWSDB)  { $localWSDB = "$PROGDIR\\tld.json"; } # Default location
+  
+  # Start an agent
+  my $ua = new LWP::UserAgent;
+  $ua->agent($CONFIG{'USERAGENT'});
+  $ua->default_header('Accept-Language' => 'en');
+  
+  # Set the progress bar
+  $win->ChangeCursor($HOURGLASS);
+  $winPb->lblPbCurr->Text($STR{'connecting'}.' github.com...');
+  $winPb->lblCount->Text("0 %");
+  $winPb->pbWinPb->SetRange(0, 100);
+  $winPb->pbWinPb->SetPos(0);
+  $winPb->pbWinPb->SetStep(1);
+  $winPb->Center($win);
+  $winPb->Show();
+  
+  # Check size of the remote file
+  if (!$TOTAL_SIZE) {
     my $req    = new HTTP::Request HEAD => $WSDB_URL;
     my $res    = $ua->request($req);
     my $return = $res->status_line;
-    if ($res->code == 200 and $res->header('etag')) {
-      $CONFIG{'CURR_WSDB_ETAG'} = $res->header('etag');
-      &saveConfig(\%CONFIG);
+    if ($res->code == 200) { $TOTAL_SIZE = $res->header('content_length'); }
+    else {
+      Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errorConRemote'}...", $STR{'error'}, 0x40010);
+      # Turn off progress bar
+      $win->ChangeCursor($ARROW);
+      $winPb->lblPbCurr->Text('');
+      $winPb->lblCount->Text('');
+      $winPb->pbWinPb->SetPos(0);
+      &winPb_Terminate;
     }
-		return(1);
-  # Error download
-  } else { return(0); }
+  }
+  
+  # Download the file
+  if ($TOTAL_SIZE) {
+    my $downloadData;
+    
+    # Download the file
+    $winPb->Text($STR{'downloadWSDB'}.'...');
+    $winPb->lblPbCurr->Text($STR{'downloadWSDB'}.'...');
+    my $response = $ua->get($WSDB_URL, ':content_cb' => sub {
+      # Local variables
+      my ($data, $response, $protocol) = @_;
+      
+      $downloadData       .= $data;                                     # Downloaded data
+      my $totalDownloaded  = length($downloadData);                     # Size of downloaded data
+      my $completed        = int($totalDownloaded / $TOTAL_SIZE * 100); # Pourcentage of download completed
+      
+      $winPb->pbWinPb->SetPos($completed);    # Set the progress bar
+      $winPb->lblCount->Text("$completed %"); # Indicate purcentage
+    });
+    
+    # Save data in a file
+    if ($response and $response->is_success) {
+      open(WSDB,">$localWSDB");
+      print WSDB $downloadData;
+      close(WSDB);
+    }
+    $downloadData = undef;
+    
+    # Finished
+    if (-T $localWSDB) {
+      $winConfig->tfWSDB->Text($localWSDB);
+      # Turn off progress bar
+      $win->ChangeCursor($ARROW);
+      $winPb->lblPbCurr->Text('');
+      $winPb->lblCount->Text('');
+      $winPb->pbWinPb->SetPos(0);
+      &winPb_Terminate;
+      Win32::GUI::MessageBox($winConfig, $STR{'updatedWSDB'}, $STR{'updateWSDB'}, 0x40040);
+    } else {
+      Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadWSDB'}...", $STR{'error'}, 0x40010);
+      # Turn off progress bar
+      $win->ChangeCursor($ARROW);
+      $winPb->lblPbCurr->Text('');
+      $winPb->lblCount->Text('');
+      $winPb->pbWinPb->SetPos(0);
+      &winPb_Terminate;
+    }
+
+  } else {
+    Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadWSDB'}...", $STR{'error'}, 0x40010);
+    # Turn off progress bar
+    $win->ChangeCursor($ARROW);
+    $winPb->lblPbCurr->Text('');
+    $winPb->lblCount->Text('');
+    $winPb->pbWinPb->SetPos(0);
+    &winPb_Terminate;
+  }
+  
+  $TOTAL_SIZE = 0;
   
 }  #--- End downloadWSDB
 
 #--------------------------#
-sub checkIPv4DB
+sub updateIPv4DB
 #--------------------------#
 {
   # Local variables
 	my $confirm = shift;
-  
-  # If $confirm == 1, Show Update Window (check update in progress...)
-  if ($confirm) {
-    $winUpdate->lblUpdateErr->Hide;
-    $winUpdate->btnUpdateYes->Hide;
-    $winUpdate->btnUpdateNo->Hide;
-    $winUpdate->lblUpdateLogo->Show;
-    $winUpdate->Text($STR{'updateIPv4DB'});
-    $winUpdate->lblUpdateMsg->Text($STR{'btnIPv4DBUptTip'}.'...');
-    $winUpdate->Center($winConfig);
-    $winUpdate->Show();
-  }
   
   my ($upToDate, $return, $dateLocalFile, $dateRemoteFile) = &checkDateIPv4DB($confirm);
   # Values for $upToDate
@@ -6952,51 +7033,35 @@ sub checkIPv4DB
 
   # IPv4 Database is outdated or doesn't exist
   if (!$upToDate or $upToDate == 2) {
-    # Show Update Window to display update available
-    # If $confirm == 1, Update Window is already displayed
-    if (!$confirm) {
-      $winUpdate->lblUpdateErr->Hide;
-      $winUpdate->btnUpdateYes->Hide;
-      $winUpdate->btnUpdateNo->Hide;
-      $winUpdate->lblUpdateLogo->Show;
-      $winUpdate->Text($STR{'updateIPv4DB'});
-      $winUpdate->lblUpdateMsg->Text($STR{'btnIPv4DBUptTip'}.'...');
-      $winUpdate->Center($win);
-      $winUpdate->Show();
-    }
-    # Download update ?
-    $winUpdate->btnUpdateOk->Hide;
-    $winUpdate->btnUpdateYes->Show;
-    $winUpdate->btnUpdateNo->Show;
     my $msg;
     if ($dateLocalFile and $dateRemoteFile) {
       Encode::from_to($dateRemoteFile, 'utf8', 'iso-8859-1');
       $msg = "$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} iana.org: $dateRemoteFile\n\n$STR{'updateAvailable'} ?";
     } else { $msg = "$STR{'IPv4DBNotExist'} ?"; }
-    $winUpdate->lblUpdateMsg->Text($msg);
-    $UPDATE_FLAG = 3;
+    
+    # Yes (6), No (7)
+    my $answer = Win32::GUI::MessageBox($win, $msg, $STR{'updateIPv4DB'}, 0x1024);
+    
+    # Answer is No
+    if ($answer == 7) { return(0); }
+    
+    # Answer is Yes, download the update
+    else { &downloadIPv4DB(); }
     
   # IPv4DB is up to date, show message if $confirm == 1
   } elsif ($upToDate == 1) {
     if ($confirm) {
-      $winUpdate->btnUpdateYes->Hide;
-      $winUpdate->btnUpdateNo->Hide;
-      $winUpdate->btnUpdateOk->Show;
       Encode::from_to($dateRemoteFile, 'utf8', 'iso-8859-1');
-      $winUpdate->lblUpdateMsg->Text("$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} iana.org: $dateRemoteFile\n\n$STR{'DBUpToDate'} !");
+      Win32::GUI::MessageBox($win,  "$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} iana.org: ".
+                                    "$dateRemoteFile\n\n$STR{'DBUpToDate'} !", $STR{'updateIPv4DB'}, 0x40040);
     }
   # Connection error, show message if $confirm == 1
   } elsif (($upToDate == 3 or $upToDate == 4) and $confirm) {
-    $winUpdate->btnUpdateYes->Hide;
-    $winUpdate->btnUpdateNo->Hide;
-    $winUpdate->btnUpdateOk->Show;
-    $winUpdate->lblUpdateLogo->Hide;
-    $winUpdate->lblUpdateErr->Show;
-    if ($upToDate == 3) { $winUpdate->lblUpdateMsg->Text("$STR{'errConnection'}: $return"); }
-    else                { $winUpdate->lblUpdateMsg->Text("$STR{'errUnknown'}: $return");    }
+    if ($upToDate == 3) { Win32::GUI::MessageBox($win, "$STR{'errConnection'}: $return", $STR{'error'}, 0x40010); }
+    else                { Win32::GUI::MessageBox($win, "$STR{'errUnknown'}: $return", $STR{'error'}   , 0x40010); }
   }
 
-}  #--- End checkIPv4DB
+}  #--- End updateIPv4DB
 
 #--------------------------#
 sub checkDateIPv4DB
@@ -7005,7 +7070,6 @@ sub checkDateIPv4DB
   # Local variables
   my ($confirm)   = @_;
   my $localIPv4DB = $winConfig->tfIPv4DB->Text();
-  my @month       = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
   my $lastModifDate;
   
   # IPv4 Database doesn't exist or invalid file
@@ -7018,7 +7082,7 @@ sub checkDateIPv4DB
 
   # Check date of the remote file
   my $ua = new LWP::UserAgent;
-  $ua->agent($USERAGENT);
+  $ua->agent($CONFIG{'USERAGENT'});
   $ua->default_header('Accept-Language' => 'en');
   my $req    = new HTTP::Request HEAD => $IPv4DB_URL;
   my $res    = $ua->request($req);
@@ -7028,22 +7092,18 @@ sub checkDateIPv4DB
   } else { return(3, $return, undef, undef); } # Error connection
   
   # Compare local et remote file date
-  if ($lastModifDate) {
-    my $date = new Date::Manip::Date;
-    my $err  = $date->parse($lastModifDate);
-    if (!$err) {
-      my $dateUpt = $date->printf('%Y-%m-%d');
-      my ($yd, $md, $dd)  = split(/-/, $dateUpt);
-      if    ($yl  > $yd) { return(1, $return, $dateLocalFile, $dateUpt);   } # IPv4DB is up to date
-      elsif ($yl == $yd) { # Same year
-        if ($ml > $md)     { return(1, $return, $dateLocalFile, $dateUpt); } # IPv4DB is up to date
-        elsif ($ml == $md) { # Same month
-          if ($dl >= $dd) { return(1, $return, $dateLocalFile, $dateUpt);  } # IPv4DB is up to date
-          else            { return(2, $return, $dateLocalFile, $dateUpt);  } # IPv4DB is outdated
-        } else { return(2, $return, $dateLocalFile, $dateUpt); }             # IPv4DB is outdated
-      } else { return(2, $return, $dateLocalFile, $dateUpt); }               # IPv4DB is outdated
-    } else { return(4, $return, undef, undef); }                					   # Unknown error
-  } else { return(3, $return, undef, undef); }                  					   # Connection error
+  if ($lastModifDate and my ($y, $m, $d) = parse_date($lastModifDate)) { # Parse date
+    my $dateUpt = sprintf("%4d-%02d-%02d", $y, $m, $d);
+    my ($yd, $md, $dd)  = split(/-/, $dateUpt);
+    if    ($yl  > $yd) { return(1, $return, $dateLocalFile, $dateUpt);   } # IPv4DB is up to date
+    elsif ($yl == $yd) { # Same year
+      if ($ml > $md)     { return(1, $return, $dateLocalFile, $dateUpt); } # IPv4DB is up to date
+      elsif ($ml == $md) { # Same month
+        if ($dl >= $dd) { return(1, $return, $dateLocalFile, $dateUpt);  } # IPv4DB is up to date
+        else            { return(2, $return, $dateLocalFile, $dateUpt);  } # IPv4DB is outdated
+      } else { return(2, $return, $dateLocalFile, $dateUpt); }             # IPv4DB is outdated
+    } else { return(2, $return, $dateLocalFile, $dateUpt); }               # IPv4DB is outdated
+  } else { return(3, $return, undef, undef); }                  	  		   # Connection error
 
 }  #--- End checkDateIPv4DB
 
@@ -7052,34 +7112,29 @@ sub downloadIPv4DB
 #--------------------------#
 {
   # Local variables
-  my $localIPv4DB = shift;
-
-  # Download Database
-  if (is_success(getstore($IPv4DB_CSV, $localIPv4DB))) { return(1); }
-  # Error download
-  else { return(0); }
+  my $localIPv4DB    = $winConfig->tfIPv4DB->Text();
+  if (!$localIPv4DB) { $localIPv4DB = "$PROGDIR\\ipv4-address-space.csv"; } # Default location
+  
+  # IPv4DB is small, useless to show progress bar
+  $win->ChangeCursor($HOURGLASS);
+  if (is_success(getstore($IPv4DB_CSV, $localIPv4DB))) {
+    $winConfig->tfIPv4DB->Text($localIPv4DB);
+    $win->ChangeCursor($ARROW);
+    Win32::GUI::MessageBox($winConfig, $STR{'updatedIPv4DB'}, $STR{'updateIPv4DB'}, 0x40040);
+  # Error
+  } else {
+    $win->ChangeCursor($ARROW);
+    Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadIPv4DB'}...", $STR{'error'}, 0x40010);
+  }
   
 }  #--- End downloadIPv4DB
 
 #--------------------------#
-sub checkIPv6DB
+sub updateIPv6DB
 #--------------------------#
 {
   # Local variables
 	my $confirm = shift;
-  
-  # If $confirm == 1, Show Update Window (check update in progress...)
-  if ($confirm) {
-    $winUpdate->lblUpdateErr->Hide;
-    $winUpdate->btnUpdateYes->Hide;
-    $winUpdate->btnUpdateNo->Hide;
-    $winUpdate->lblUpdateLogo->Show;
-    $winUpdate->Text($STR{'updateIPv6DB'});
-    $winUpdate->lblUpdateMsg->Text($STR{'btnIPv6DBUptTip'}.'...');
-    $winUpdate->Center($win);
-    $winUpdate->Show();
-    $win->Disable();
-  }
   
   my ($upToDate, $return, $dateLocalFile, $dateRemoteFile) = &checkDateIPv6DB($confirm);
   # Values for $upToDate
@@ -7091,51 +7146,35 @@ sub checkIPv6DB
 
   # IPv6 Database is outdated or doesn't exist
   if (!$upToDate or $upToDate == 2) {
-    # Show Update Window to display update available
-    # If $confirm == 1, Update Window is already displayed
-    if (!$confirm) {
-      $winUpdate->lblUpdateErr->Hide;
-      $winUpdate->btnUpdateYes->Hide;
-      $winUpdate->btnUpdateNo->Hide;
-      $winUpdate->lblUpdateLogo->Show;
-      $winUpdate->Text($STR{'updateIPv6DB'});
-      $winUpdate->lblUpdateMsg->Text($STR{'btnIPv6DBUptTip'}.'...');
-      $winUpdate->Center($win);
-      $winUpdate->Show();
-    }
-    # Download update ?
-    $winUpdate->btnUpdateOk->Hide;
-    $winUpdate->btnUpdateYes->Show;
-    $winUpdate->btnUpdateNo->Show;
     my $msg;
     if ($dateLocalFile and $dateRemoteFile) {
       Encode::from_to($dateRemoteFile, 'utf8', 'iso-8859-1');
       $msg = "$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} iana.org: $dateRemoteFile\n\n$STR{'updateAvailable'} ?";
     } else { $msg = "$STR{'IPv6DBNotExist'} ?"; }
-    $winUpdate->lblUpdateMsg->Text($msg);
-    $UPDATE_FLAG = 4;
+    
+    # Yes (6), No (7)
+    my $answer = Win32::GUI::MessageBox($win, $msg, $STR{'updateIPv6DB'}, 0x1024);
+    
+    # Answer is No
+    if ($answer == 7) { return(0); }
+    
+    # Answer is Yes, download the update
+    else { &downloadIPv6DB(); }
     
   # IPv6DB is up to date, show message if $confirm == 1
   } elsif ($upToDate == 1) {
     if ($confirm) {
-      $winUpdate->btnUpdateYes->Hide;
-      $winUpdate->btnUpdateNo->Hide;
-      $winUpdate->btnUpdateOk->Show;
       Encode::from_to($dateRemoteFile, 'utf8', 'iso-8859-1');
-      $winUpdate->lblUpdateMsg->Text("$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} iana.org: $dateRemoteFile\n\n$STR{'DBUpToDate'} !");
+      Win32::GUI::MessageBox($win,  "$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} iana.org: ".
+                                    "$dateRemoteFile\n\n$STR{'DBUpToDate'} !", $STR{'updateIPv6DB'}, 0x40040);
     }
   # Connection error, show message if $confirm == 1
   } elsif (($upToDate == 3 or $upToDate == 4) and $confirm) {
-    $winUpdate->btnUpdateYes->Hide;
-    $winUpdate->btnUpdateNo->Hide;
-    $winUpdate->btnUpdateOk->Show;
-    $winUpdate->lblUpdateLogo->Hide;
-    $winUpdate->lblUpdateErr->Show;
-    if ($upToDate == 3) { $winUpdate->lblUpdateMsg->Text("$STR{'errConnection'}: $return"); }
-    else                { $winUpdate->lblUpdateMsg->Text("$STR{'errUnknown'}: $return");    }
+    if ($upToDate == 3) { Win32::GUI::MessageBox($win, "$STR{'errConnection'}: $return", $STR{'error'}, 0x40010); }
+    else                { Win32::GUI::MessageBox($win, "$STR{'errUnknown'}: $return", $STR{'error'}   , 0x40010); }
   }
 
-}  #--- End checkIPv6DB
+}  #--- End updateIPv6DB
 
 #--------------------------#
 sub checkDateIPv6DB
@@ -7144,7 +7183,6 @@ sub checkDateIPv6DB
   # Local variables
   my ($confirm)   = @_;
   my $localIPv6DB  = $winConfig->tfIPv6DB->Text();
-  my @month       = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
   my $lastModifDate;
   
   # IPv6 Database doesn't exist or invalid file
@@ -7157,7 +7195,7 @@ sub checkDateIPv6DB
 
   # Check date of the remote file
   my $ua = new LWP::UserAgent;
-  $ua->agent($USERAGENT);
+  $ua->agent($CONFIG{'USERAGENT'});
   $ua->default_header('Accept-Language' => 'en');
   my $req    = new HTTP::Request HEAD => $IPv6DB_URL;
   my $res    = $ua->request($req);
@@ -7167,22 +7205,18 @@ sub checkDateIPv6DB
   } else { return(3, $return, undef, undef); } # Error connection
   
   # Compare local et remote file date
-  if ($lastModifDate) {
-    my $date = new Date::Manip::Date;
-    my $err  = $date->parse($lastModifDate);
-    if (!$err) {
-      my $dateUpt = $date->printf('%Y-%m-%d');
-      my ($yd, $md, $dd)  = split(/-/, $dateUpt);
-      if    ($yl  > $yd) { return(1, $return, $dateLocalFile, $dateUpt);   } # IPv6DB is up to date
-      elsif ($yl == $yd) { # Same year
-        if ($ml > $md)     { return(1, $return, $dateLocalFile, $dateUpt); } # IPv6DB is up to date
-        elsif ($ml == $md) { # Same month
-          if ($dl >= $dd) { return(1, $return, $dateLocalFile, $dateUpt);  } # IPv6DB is up to date
-          else            { return(2, $return, $dateLocalFile, $dateUpt);  } # IPv6DB is outdated
-        } else { return(2, $return, $dateLocalFile, $dateUpt); }             # IPv6DB is outdated
-      } else { return(2, $return, $dateLocalFile, $dateUpt); }               # IPv6DB is outdated
-    } else { return(4, $return, undef, undef); }                					   # Unknown error
-  } else { return(3, $return, undef, undef); }                  					   # Connection error
+  if ($lastModifDate and my ($y, $m, $d) = parse_date($lastModifDate)) { # Parse date
+    my $dateUpt = sprintf("%4d-%02d-%02d", $y, $m, $d);
+    my ($yd, $md, $dd)  = split(/-/, $dateUpt);
+    if    ($yl  > $yd) { return(1, $return, $dateLocalFile, $dateUpt);   } # IPv6DB is up to date
+    elsif ($yl == $yd) { # Same year
+      if ($ml > $md)     { return(1, $return, $dateLocalFile, $dateUpt); } # IPv6DB is up to date
+      elsif ($ml == $md) { # Same month
+        if ($dl >= $dd) { return(1, $return, $dateLocalFile, $dateUpt);  } # IPv6DB is up to date
+        else            { return(2, $return, $dateLocalFile, $dateUpt);  } # IPv6DB is outdated
+      } else { return(2, $return, $dateLocalFile, $dateUpt); }             # IPv6DB is outdated
+    } else { return(2, $return, $dateLocalFile, $dateUpt); }               # IPv6DB is outdated
+  } else { return(3, $return, undef, undef); }                  				   # Connection error
 
 }  #--- End checkDateIPv6DB
 
@@ -7191,33 +7225,22 @@ sub downloadIPv6DB
 #--------------------------#
 {
   # Local variables
-  my $localIPv6DB = shift;
-
-  # Download Database
-  if (is_success(getstore($IPv6DB_CSV, $localIPv6DB))) { return(1); }
-  # Error download
-  else { return(0); }
+  my $localIPv6DB    = $winConfig->tfIPv6DB->Text();
+  if (!$localIPv6DB) { $localIPv6DB = "$PROGDIR\\ipv6-unicast-address-assignments.csv"; } # Default location
   
+  # IPv6DB is small, useless to show progress bar
+  $win->ChangeCursor($HOURGLASS);
+  if (is_success(getstore($IPv6DB_CSV, $localIPv6DB))) {
+    $winConfig->tfIPv6DB->Text($localIPv6DB);
+    $win->ChangeCursor($ARROW);
+    Win32::GUI::MessageBox($winConfig, $STR{'updatedIPv6DB'}, $STR{'updateIPv6DB'}, 0x40040);
+  # Error
+  } else {
+    $win->ChangeCursor($ARROW);
+    Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadIPv6DB'}...", $STR{'error'}, 0x40010);
+  }
+
 }  #--- End downloadIPv6DB
-
-#--------------------------#
-sub btnUpdateOk_Click
-#--------------------------#
-{
-  &winUpdate_Terminate;
-
-}  #--- End btnUpdateOk_Click
-
-#--------------------------#
-sub winUpdate_Terminate
-#--------------------------#
-{
-  $winUpdate->Hide();
-  $win->Enable();
-  $win->SetForegroundWindow();
-  return(0);
-
-}  #--- End winUpdate_Terminate
 
 #--------------------------#
 sub saveConfig
@@ -7253,30 +7276,31 @@ sub loadConfig
   }
   
   # Options
-  if (exists($$refConfig{'OPT_DOMAIN'}))          { $win->chDomain->Checked($$refConfig{'OPT_DOMAIN'});         }
-  else                                            { $win->chDomain->Checked(1);                                 } # Default checked
-  if (exists($$refConfig{'OPT_NETWORK'}))         { $win->chNetwork->Checked($$refConfig{'OPT_NETWORK'});       }
-  else                                            { $win->chNetwork->Checked(1);                                } # Default checked
-  if (exists($$refConfig{'OPT_DNS'}))             { $win->chDNS->Checked($$refConfig{'OPT_DNS'});               }
-  else                                            { $win->chDNS->Checked(0);                                    } # Default is not checked
+  if (exists($$refConfig{'OPT_DOMAIN'}))          { $win->chDomain->Checked($$refConfig{'OPT_DOMAIN'});                 }
+  else                                            { $win->chDomain->Checked(1);                                         } # Default checked
+  if (exists($$refConfig{'OPT_NETWORK'}))         { $win->chNetwork->Checked($$refConfig{'OPT_NETWORK'});               }
+  else                                            { $win->chNetwork->Checked(1);                                        } # Default checked
+  if (exists($$refConfig{'OPT_DNS'}))             { $win->chDNS->Checked($$refConfig{'OPT_DNS'});                       }
+  else                                            { $win->chDNS->Checked(0);                                            } # Default is not checked
   
   # General tab
-  if (exists($$refConfig{'TOOL_AUTO_UPDATE'}))    { $winConfig->chAutoUpdate->Checked($$refConfig{'TOOL_AUTO_UPDATE'}); }
-  else                                            { $winConfig->chAutoUpdate->Checked(1);                               } # Default checked
-  
-  # Parser
-  if (exists($$refConfig{'OPT_IPv4'}))            { $winConfig->chIPv4->Checked($$refConfig{'OPT_IPv4'});               }
-  else                                            { $winConfig->chIPv4->Checked(1);                                     } # Default checked
-  if (exists($$refConfig{'OPT_IPv6'}))            { $winConfig->chIPv6->Checked($$refConfig{'OPT_IPv6'});               }
-  else                                            { $winConfig->chIPv6->Checked(1);                                     } # Default checked
-  if (exists($$refConfig{'OPT_HOSTNAME'}))        { $winConfig->chHostname->Checked($$refConfig{'OPT_HOSTNAME'});       }
-  else                                            { $winConfig->chHostname->Checked(1);                                 } # Default checked
-  if (exists($$refConfig{'OPT_DOMAIN_NAME'}))     { $winConfig->chDomainName->Checked($$refConfig{'OPT_DOMAIN_NAME'});  }
-  else                                            { $winConfig->chDomainName->Checked(1);                               } # Default checked
-  
-  # Whois
+  if (exists($$refConfig{'TOOL_AUTO_UPDATE'}))    { $winConfig->chAutoUpdate->Checked($$refConfig{'TOOL_AUTO_UPDATE'});     }
+  else                                            { $winConfig->chAutoUpdate->Checked(1);                                   } # Default checked
+  if (exists($$refConfig{'START_MINIMIZED'}))     { $winConfig->chStartMinimized->Checked($$refConfig{'START_MINIMIZED'});  }
+  else                                            { $winConfig->chStartMinimized->Checked(0);                               } # Default is not checked
   if (exists($$refConfig{'NSLOOKUP_TIMEOUT'}))    { $winConfig->tfLookupTO->Text($$refConfig{'NSLOOKUP_TIMEOUT'});          }
   else                                            { $winConfig->tfLookupTO->Text(10); $$refConfig{'NSLOOKUP_TIMEOUT'} = 10; } # Default is 10 seconds
+  if (exists($$refConfig{'USERAGENT'}))           { $winConfig->tfUserAgent->Text($$refConfig{'USERAGENT'});                }
+  else                                            { $winConfig->tfUserAgent->Text('XL-Whois (http://www.le-tools.com)');
+                                                    $$refConfig{'USERAGENT'} = 'XL-Whois (http://www.le-tools.com)';        } # Use Default
+  if (exists($$refConfig{'OPT_IPv4'}))            { $winConfig->chIPv4->Checked($$refConfig{'OPT_IPv4'});                   }
+  else                                            { $winConfig->chIPv4->Checked(1);                                         } # Default checked
+  if (exists($$refConfig{'OPT_IPv6'}))            { $winConfig->chIPv6->Checked($$refConfig{'OPT_IPv6'});                   }
+  else                                            { $winConfig->chIPv6->Checked(1);                                         } # Default checked
+  if (exists($$refConfig{'OPT_HOSTNAME'}))        { $winConfig->chHostname->Checked($$refConfig{'OPT_HOSTNAME'});           }
+  else                                            { $winConfig->chHostname->Checked(1);                                     } # Default checked
+  if (exists($$refConfig{'OPT_DOMAIN_NAME'}))     { $winConfig->chDomainName->Checked($$refConfig{'OPT_DOMAIN_NAME'});      }
+  else                                            { $winConfig->chDomainName->Checked(1);                                   } # Default checked
   
   # Folder for report
   if (exists($$refConfig{'DIR_REPORT'}) and
