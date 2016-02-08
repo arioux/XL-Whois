@@ -187,8 +187,6 @@ sub loadDefaultStr
   $$refSTR{'update3'}             = 'Update';
   $$refSTR{'update4'}             = 'Version';
   $$refSTR{'update5'}             = 'is available. Download it';
-  $$refSTR{'update6'}             = 'Returned code';
-  $$refSTR{'update7'}             = 'Returned error';
   # General tab
   $$refSTR{'tool'}                = 'Tool';
   $$refSTR{'export'}              = 'Export';

@@ -5585,11 +5585,7 @@ sub updateTool
     }
   }
   # Error 
-  else {
-    my $status = $res->code;
-    my $error  = $res->status_line;
-    Win32::GUI::MessageBox($winConfig, "$STR{'error'}: $STR{'update6'} = [$status]; $STR{'update7'} = [$error].", $STR{'err7'},0x40010);
-  }
+  else { Win32::GUI::MessageBox($winConfig, $STR{'errConnection'}.': '.$res->status_line, $STR{'error'},0x40010); }
 
 }  #--- End updateTool
 
