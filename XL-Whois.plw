@@ -9,8 +9,8 @@
 #               into a database that can be used with other tools of the
 #               XL-Toolkit.
 # Creation    : 2015-09-30
-# Modified    : 2016-02-07
-my $VERSION   = "2.0";
+# Modified    : 2016-02-08
+my $VERSION   = "2.1";
 # Author      : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
@@ -652,8 +652,7 @@ $winConfig->AddCheckbox(    -name        => 'chTLDDBAutoUpt'        ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'chDBAutoUpt'}     ,
                             -font        => $font10                 ,
-                            -visible     => 0                       ,
-                            -disabled    => 1                       , );
+                            -visible     => 0                       , );
 $winConfig->AddTextfield(   -name        => 'tfTLDDB'               ,
                             -size        => [412, 22]               ,
                             -pos         => [150, 68]               ,
@@ -686,8 +685,7 @@ $winConfig->AddCheckbox(    -name        => 'chWSDBAutoUpt'         ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'chDBAutoUpt'}     ,
                             -font        => $font10                 ,
-                            -visible     => 0                       ,
-                            -disabled    => 1                       , );
+                            -visible     => 0                       , );
 $winConfig->AddTextfield(   -name        => 'tfWSDB'                ,
                             -size        => [412, 22]               ,
                             -pos         => [150,133]               ,
@@ -720,8 +718,7 @@ $winConfig->AddCheckbox(    -name        => 'chIPv4DBAutoUpt'       ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'chDBAutoUpt'}     ,
                             -font        => $font10                 ,
-                            -visible     => 0                       ,
-                            -disabled    => 1                       , );
+                            -visible     => 0                       , );
 $winConfig->AddTextfield(   -name        => 'tfIPv4DB'              ,
                             -size        => [412, 22]               ,
                             -pos         => [150,198]               ,
@@ -754,8 +751,7 @@ $winConfig->AddCheckbox(    -name        => 'chIPv6DBAutoUpt'        ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'chDBAutoUpt'}     ,
                             -font        => $font10                 ,
-                            -visible     => 0                       ,
-                            -disabled    => 1                       , );
+                            -visible     => 0                       , );
 $winConfig->AddTextfield(   -name        => 'tfIPv6DB'              ,
                             -size        => [412, 22]               ,
                             -pos         => [150,263]               ,
@@ -1241,15 +1237,15 @@ if (-T $CONFIG_FILE) {
   if ($CONFIG{'TOOL_AUTO_UPDATE'} or $CONFIG{'TLD_DB_AUTO_UPDATE'} or $CONFIG{'WS_DB_AUTO_UPDATE'} or $CONFIG{'IPv4_DB_AUTO_UPDATE'} or $CONFIG{'IPv6_DB_AUTO_UPDATE'}) {
     threads->create(sub {
       # Update Tool ?
-      if ($CONFIG{'TOOL_AUTO_UPDATE'})                                { &updateTool(0);   }
+      if ($CONFIG{'TOOL_AUTO_UPDATE'})    { &updateTool(0);   }
       # Update TLDDB ?
-      if ($CONFIG{'TLD_DB_AUTO_UPDATE'}  and $CONFIG{'TLD_DB_FILE'})  { &updateTLDDB(0);  }
+      if ($CONFIG{'TLD_DB_AUTO_UPDATE'} ) { &updateTLDDB(0);  }
       # Update Whois Server DB ?
-      if ($CONFIG{'WS_DB_AUTO_UPDATE'}   and $CONFIG{'WS_DB_FILE'})   { &updateWSDB(0);   }
+      if ($CONFIG{'WS_DB_AUTO_UPDATE'}  ) { &updateWSDB(0);   }
       # Update IPv4 DB ?
-      if ($CONFIG{'IPv4_DB_AUTO_UPDATE'} and $CONFIG{'IPv4_DB_FILE'}) { &updateIPv4DB(0); }
+      if ($CONFIG{'IPv4_DB_AUTO_UPDATE'}) { &updateIPv4DB(0); }
       # Update IPv6 DB ?
-      if ($CONFIG{'IPv6_DB_AUTO_UPDATE'} and $CONFIG{'IPv6_DB_FILE'}) { &updateIPv6DB(0); }
+      if ($CONFIG{'IPv6_DB_AUTO_UPDATE'}) { &updateIPv6DB(0); }
     });
   }
 
@@ -5167,12 +5163,50 @@ sub firstStart
     # Selected folder
     if ($dir and -d $dir) {
       # Turn on progress bar
+      $win->ChangeCursor($HOURGLASS);
       $winPb->lblPbCurr->Text('');
       $winPb->lblCount->Text('');
       $winPb->pbWinPb->SetPos(0);
+      $winPb->btnCancel->Disable();
       $winPb->Center();
       $winPb->Show();
       
+      # Configuring General Options
+      $winPb->lblPbCurr->Text($STR{'firstStart1'}.'...');
+      # Tool
+      $winConfig->chAutoUpdate->Checked(1);      
+      $CONFIG{'TOOL_AUTO_UPDATE'} = 1;
+      # General
+      $winConfig->tfLookupTO->Text(10); # Set Nslookup timeout to 10 seconds
+      $CONFIG{'NSLOOKUP_TIMEOUT'} = 10;
+      $winConfig->tfUserAgent->Text('XL-Whois (http://www.le-tools.com)'); # Default User-Agent
+      $CONFIG{'USERAGENT'} = 'XL-Whois (http://www.le-tools.com)'; 
+      # Parser
+      $winConfig->chIPv4->Checked(1);
+      $winConfig->chIPv6->Checked(1);
+      $winConfig->chHostname->Checked(1);
+      $winConfig->chDomainName->Checked(1);
+      $CONFIG{'OPT_IPv4'}        = 1;
+      $CONFIG{'OPT_IPv6'}        = 1;
+      $CONFIG{'OPT_HOSTNAME'}    = 1;
+      $CONFIG{'OPT_DOMAIN_NAME'} = 1;
+
+      # Configuring Storage
+      # Folder for Report
+      $winPb->lblPbCurr->Text($STR{'createReportFolder'}.'...');
+      sleep(1);
+      my $reportDir = "$dir\\whois";
+      if (!-d $reportDir) { mkdir($reportDir); }
+      $winConfig->tfReportDir->Text($reportDir);
+      $winConfig->chAutoViewing->Checked(1); # Set auto viewing
+      $CONFIG{'AUTO_VIEWING'} = 1;
+      $winConfig->tfMaxView->Text(25); # Set auto viewing max to 25
+      $CONFIG{'MAX_VIEW'}   = 25;
+      $CONFIG{'DIR_REPORT'} = $reportDir;
+      $winConfig->chReplace->Checked(0); # "If report exist, replace" not checked
+      $CONFIG{'REPORT_REPLACE'} = 0;
+      $winConfig->chAutoViewDir->Checked(0); # Auto view dir not checked
+      $CONFIG{'AUTO_VIEW_DIR'}  = 0;
       # Create Logging Database
       $winPb->lblPbCurr->Text($STR{'btnLogDbFileNewTip'}.'...');
       sleep(1);
@@ -5192,7 +5226,6 @@ sub firstStart
       } else {    
         Win32::GUI::MessageBox($winPb, $STR{'errCreatingLoggingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
       }
-      
       # Create Whois Database
       $return = 0;
       $winPb->lblPbCurr->Text($STR{'btnDbFileNewTip'}.'...');
@@ -5212,99 +5245,42 @@ sub firstStart
         Win32::GUI::MessageBox($winPb, $STR{'errCreatingWhoisDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
       }
       
-      # Folder for Report
-      $return = 0;
-      $winPb->lblPbCurr->Text($STR{'createReportFolder'}.'...');
-      sleep(1);
-      my $reportDir = "$dir\\whois";
-      if (!-d $reportDir) { mkdir($reportDir); }
-      $winConfig->tfReportDir->Text($reportDir);
-      $winConfig->chAutoViewing->Checked(1); # Set auto viewing
-      $CONFIG{'AUTO_VIEWING'} = 1;
-      $winConfig->tfMaxView->Text(25); # Set auto viewing max to 25
-      $CONFIG{'MAX_VIEW'}   = 25;
-      $CONFIG{'DIR_REPORT'} = $reportDir;
-      $winConfig->chReplace->Checked(0); # "If report exist, replace" not checked
-      $CONFIG{'REPORT_REPLACE'} = 0;
-      $winConfig->chAutoViewDir->Checked(0); # Auto view dir not checked
-      $CONFIG{'AUTO_VIEW_DIR'}  = 0;
-      
+      # Configuring Databases
       # Download TLD Database
-      $return = 0;
       $winPb->lblPbCurr->Text($STR{'downloadTLDDB'}.'...');
-      my $localTLDDB = "$dir\\effective_tld_names.dat";
-      $return = &downloadTLDDB($localTLDDB);
-      if ($return) {
-        $CONFIG{'TLD_DB_FILE'} = $localTLDDB;
-        $winConfig->tfTLDDB->Text($localTLDDB);
-        $winConfig->chTLDDBAutoUpt->Checked(1); # Set auto update for TLD Database
-        $CONFIG{'TLD_DB_AUTO_UPDATE'} = 1;
-      } else { Win32::GUI::MessageBox($winPb, $STR{'errDownloadTLDDB'}.'...', $STR{'error'}, 0x40010); }
-      
+      $return = &downloadTLDDB(1, "$dir\\effective_tld_names.dat");
+      if ($return) { $winPb->lblPbCurr->Text($return.'...'); sleep(1); } # Error
+      $winConfig->chTLDDBAutoUpt->Checked(1); # Set auto update for TLD Database
+      $CONFIG{'TLD_DB_AUTO_UPDATE'} = 1;
       # Download Whois Server Database
-      $return = 0;
       $winPb->lblPbCurr->Text($STR{'downloadWSDB'}.'...');
-      my $localWSDB = "$dir\\tld.json";
-      $return = &downloadWSDB($localWSDB);
-      if ($return) {
-        $CONFIG{'WS_DB_FILE'} = $localWSDB;
-        $winConfig->tfWSDB->Text($localWSDB);
-        $winConfig->chWSDBAutoUpt->Checked(1); # Set auto update for Whois Server Database
-        $CONFIG{'WS_DB_AUTO_UPDATE'} = 1;
-      } else { Win32::GUI::MessageBox($winPb, $STR{'errDownloadWSDB'}.'...', $STR{'error'}, 0x40010); }
-      
+      $return = &downloadWSDB(1, "$dir\\tld.json");
+      if ($return) { $winPb->lblPbCurr->Text($return.'...'); sleep(1); } # Error
+      $winConfig->chWSDBAutoUpt->Checked(1); # Set auto update for Whois Server Database
+      $CONFIG{'WS_DB_AUTO_UPDATE'} = 1;
       # Download IPv4 Database
-      $return = 0;
       $winPb->lblPbCurr->Text($STR{'downloadIPv4DB'}.'...');
-      my $localIPv4DB = "$dir\\ipv4-address-space.csv";
-      $return = &downloadIPv4DB($localIPv4DB);
-      if ($return) {
-        $CONFIG{'IPv4_DB_FILE'} = $localIPv4DB;
-        $winConfig->tfIPv4DB->Text($localIPv4DB);
-        $winConfig->chIPv4DBAutoUpt->Checked(1); # Set auto update for IPv4 Database
-        $CONFIG{'IPv4_DB_AUTO_UPDATE'} = 1;
-      } else { Win32::GUI::MessageBox($winPb, $STR{'errDownloadIPv4DB'}.'...', $STR{'error'}, 0x40010); }
-      
+      $return = &downloadIPv4DB(1, "$dir\\ipv4-address-space.csv");
+      if ($return) { $winPb->lblPbCurr->Text($return.'...'); sleep(1); } # Error
+      $winConfig->chIPv4DBAutoUpt->Checked(1); # Set auto update for IPv4 Database
+      $CONFIG{'IPv4_DB_AUTO_UPDATE'} = 1;
       # Download IPv6 Database
-      $return = 0;
       $winPb->lblPbCurr->Text($STR{'downloadIPv6DB'}.'...');
-      my $localIPv6DB = "$dir\\ipv6-unicast-address-assignments.csv";
-      $return = &downloadIPv6DB($localIPv6DB);
-      if ($return) {
-        $CONFIG{'IPv6_DB_FILE'} = $localIPv6DB;
-        $winConfig->tfIPv6DB->Text($localIPv6DB);
-        $winConfig->chIPv6DBAutoUpt->Checked(1); # Set auto update for IPv6 Database
-        $CONFIG{'IPv6_DB_AUTO_UPDATE'} = 1;
-      } else { Win32::GUI::MessageBox($winPb, $STR{'errDownloadIPv6DB'}.'...', $STR{'error'}, 0x40010); }
-      
-      # Tool
-      $winConfig->chAutoUpdate->Checked(1);      
-      $CONFIG{'TOOL_AUTO_UPDATE'} = 1;
-      
-      # Parser
-      $winConfig->chIPv4->Checked(1);
-      $winConfig->chIPv6->Checked(1);
-      $winConfig->chHostname->Checked(1);
-      $winConfig->chDomainName->Checked(1);
-      $CONFIG{'OPT_IPv4'}        = 1;
-      $CONFIG{'OPT_IPv6'}        = 1;
-      $CONFIG{'OPT_HOSTNAME'}    = 1;
-      $CONFIG{'OPT_DOMAIN_NAME'} = 1;
-
-      # Whois
-      $winConfig->tfLookupTO->Text(10); # Set Nslookup timeout to 10 seconds
-      $CONFIG{'NSLOOKUP_TIMEOUT'} = 10;
-      $winConfig->tfUserAgent->Text('XL-Whois (http://www.le-tools.com)'); # Default User-Agent
-      $CONFIG{'USERAGENT'} = 'XL-Whois (http://www.le-tools.com)'; 
+      $return = &downloadIPv6DB(1, "$dir\\ipv6-unicast-address-assignments.csv");
+      if ($return) { $winPb->lblPbCurr->Text($return.'...'); sleep(1); } # Error
+      $winConfig->chIPv6DBAutoUpt->Checked(1); # Set auto update for IPv6 Database
+      $CONFIG{'IPv6_DB_AUTO_UPDATE'} = 1;
       
       # Turn off progress bar
       $winPb->lblPbCurr->Text('');
       $winPb->lblCount->Text('');
       $winPb->pbWinPb->SetPos(0);
+      $winPb->btnCancel->Enable();
       &winPb_Terminate;
   
       &saveConfig(\%CONFIG);
       &isWhoisReady(0);
+      $win->ChangeCursor($ARROW);
       
       # Send a test ? (program directory)
       $answer = Win32::GUI::MessageBox($win, $STR{'defaultConfigSet'}, $STR{'config'}, 0x41024);
@@ -6212,25 +6188,34 @@ sub tfTLDDB_Change
   my $TLDdbFile = $winConfig->tfTLDDB->Text();
   
   # Remember
-  if ($TLDdbFile and -f $TLDdbFile) {
-    # Reload TLD Database
-    $TLDDB = Domain::PublicSuffix->new({ 'data_file' => $TLDdbFile });
-    if($TLDDB->get_root_domain('www.google.com')) {
-      $CONFIG{'TLD_DB_FILE'} = $TLDdbFile;
-      &saveConfig(\%CONFIG);
-      $winConfig->chTLDDBAutoUpt->Enable();
-    } else {
+  if ($TLDdbFile and -f $TLDdbFile and &validTLDDB($TLDdbFile)) {
+    $CONFIG{'TLD_DB_FILE'} = $TLDdbFile;
+    &saveConfig(\%CONFIG);
+  } else {
+    $winConfig->tfTLDDB->Text('');
+    delete($CONFIG{'TLD_DB_FILE'});
+    &saveConfig(\%CONFIG);
+    if ($TLDdbFile) {
       $winConfig->tfTLDDB->Text('');
-      delete($CONFIG{'TLD_DB_FILE'});
-      $winConfig->chTLDDBAutoUpt->Disable();
-      $winConfig->chTLDDBAutoUpt->Checked(0);
-      $CONFIG{'TLD_DB_AUTO_UPDATE'} = 0;
-      &saveConfig(\%CONFIG);
-      if ($START == 1) { Win32::GUI::MessageBox($winConfig, $STR{'errNoValidFile'}, $STR{'error'},0x40010); }
+      if ($START == 1) { Win32::GUI::MessageBox($winConfig, $STR{'errNoValidFile'}, $STR{'error'}, 0x40010); }
     }
   }
 
 }  #--- End tfTLDDB_Change
+
+#--------------------------#
+sub validTLDDB
+#--------------------------#
+{
+  # Local variables
+  my $TLDdbFile = shift;
+  
+  $TLDDB = Domain::PublicSuffix->new({ 'data_file' => $TLDdbFile });
+  if ($TLDDB->get_root_domain('www.google.com')) { return(1); }
+  
+  return(0);
+  
+}  #--- End validTLDDB
 
 #--------------------------#
 sub btnTLDDB_Click
@@ -6299,25 +6284,34 @@ sub tfWSDB_Change
   my $WSdbFile = $winConfig->tfWSDB->Text();
   
   # Remember
-  if ($WSdbFile and -f $WSdbFile) {
-    # Valid database file
-    eval { json_file_to_perl($WSdbFile); };
-    if ($@) {
+  if ($WSdbFile and -f $WSdbFile and &validWSDB($WSdbFile)) {
+    $CONFIG{'WS_DB_FILE'} = $WSdbFile;
+    &saveConfig(\%CONFIG);
+  } else {
+    $winConfig->tfWSDB->Text('');
+    delete($CONFIG{'WS_DB_FILE'});
+    &saveConfig(\%CONFIG);
+    if ($WSdbFile) {
       $winConfig->tfWSDB->Text('');
-      delete($CONFIG{'WS_DB_FILE'});
-      $winConfig->chWSDBAutoUpt->Disable();
-      $winConfig->chWSDBAutoUpt->Checked(0);
-      $CONFIG{'WS_DB_AUTO_UPDATE'} = 0;
-      &saveConfig(\%CONFIG);
       if ($START == 1) { Win32::GUI::MessageBox($winConfig, $STR{'errNoValidFile'}, $STR{'error'}, 0x40010); }
-    } else {
-      $CONFIG{'WS_DB_FILE'} = $WSdbFile;
-      &saveConfig(\%CONFIG);
-      $winConfig->chWSDBAutoUpt->Enable();
     }
   }
 
 }  #--- End tfWSDB_Change
+
+#--------------------------#
+sub validWSDB
+#--------------------------#
+{
+  # Local variables
+  my $WSdbFile = shift;
+  
+  eval { json_file_to_perl($WSdbFile); };
+  if (!$@) { return(1); }
+  
+  return(0);
+  
+}  #--- End validWSDB
 
 #--------------------------#
 sub btnWSDB_Click
@@ -6386,20 +6380,16 @@ sub tfIPv4DB_Change
   my $IPv4dbFile = $winConfig->tfIPv4DB->Text();
   
   # Remember
-  if ($IPv4dbFile and -f $IPv4dbFile) {
-    # Reload IPv4 Database
-    if(&validIPv4DB) {
-      $CONFIG{'IPv4_DB_FILE'} = $IPv4dbFile;
-      &saveConfig(\%CONFIG);
-      $winConfig->chIPv4DBAutoUpt->Enable();
-    } else {
+  if ($IPv4dbFile and -f $IPv4dbFile and &validIPv4DB($IPv4dbFile)) {
+    $CONFIG{'IPv4_DB_FILE'} = $IPv4dbFile;
+    &saveConfig(\%CONFIG);
+  } else {
+    $winConfig->tfIPv4DB->Text('');
+    delete($CONFIG{'IPv4_DB_FILE'});
+    &saveConfig(\%CONFIG);
+    if ($IPv4dbFile) {
       $winConfig->tfIPv4DB->Text('');
-      delete($CONFIG{'IPv4_DB_FILE'});
-      $winConfig->chIPv4DBAutoUpt->Disable();
-      $winConfig->chIPv4DBAutoUpt->Checked(0);
-      $CONFIG{'IPv4_DB_AUTO_UPDATE'} = 0;
-      &saveConfig(\%CONFIG);
-      if ($START == 1) { Win32::GUI::MessageBox($winConfig, $STR{'errNoValidFile'}, $STR{'error'},0x40010); }
+      if ($START == 1) { Win32::GUI::MessageBox($winConfig, $STR{'errNoValidFile'}, $STR{'error'}, 0x40010); }
     }
   }
 
@@ -6410,15 +6400,21 @@ sub validIPv4DB
 #--------------------------#
 {
   # Local variables
-  my $refIPv4    = shift;
-  my $IPv4dbFile = $winConfig->tfIPv4DB->Text();
+  my $IPv4dbFile = shift;
+  my $first;
+  my $second;
   
-  # Open IPv4 CSV file and read first line
-  open my $IPv4_CSV, '<', $IPv4dbFile or Win32::GUI::MessageBox($win, $STR{'errReading'}.$!, $STR{'error'},0x40010);
-  my $firstLine = <$IPv4_CSV>; 
-  close $IPv4_CSV;
-  if ($firstLine =~ /^Prefix,/) { return(1); }
-  else                          { return(0); }  
+  # Open IPv4 CSV file and read first two lines
+  if (open(my $IPv4_CSV, '<', $IPv4dbFile)) {
+    while( my $line = <$IPv4_CSV>)  {
+      if (!$first) { $first  = $line;       }
+      else         { $second = $line; last; }
+    }
+    close $IPv4_CSV;
+    if ($first =~ /^Prefix,/ and $second =~ /^\d{3}\//) { return(1); }
+  }
+  
+  return(0);
 
 }  #--- End validIPv4DB
 
@@ -6518,20 +6514,16 @@ sub tfIPv6DB_Change
   my $IPv6dbFile = $winConfig->tfIPv6DB->Text();
   
   # Remember
-  if ($IPv6dbFile and -f $IPv6dbFile) {
-    # Reload IPv6 Database
-    if(&validIPv6DB) {
-      $CONFIG{'IPv6_DB_FILE'} = $IPv6dbFile;
-      &saveConfig(\%CONFIG);
-      $winConfig->chIPv6DBAutoUpt->Enable();
-    } else {
+  if ($IPv6dbFile and -f $IPv6dbFile and &validIPv6DB($IPv6dbFile)) {
+    $CONFIG{'IPv6_DB_FILE'} = $IPv6dbFile;
+    &saveConfig(\%CONFIG);
+  } else {
+    $winConfig->tfIPv6DB->Text('');
+    delete($CONFIG{'IPv6_DB_FILE'});
+    &saveConfig(\%CONFIG);
+    if ($IPv6dbFile) {
       $winConfig->tfIPv6DB->Text('');
-      delete($CONFIG{'IPv6_DB_FILE'});
-      $winConfig->chIPv6DBAutoUpt->Disable();
-      $winConfig->chIPv6DBAutoUpt->Checked(0);
-      $CONFIG{'IPv6_DB_AUTO_UPDATE'} = 0;
-      &saveConfig(\%CONFIG);
-      if ($START == 1) { Win32::GUI::MessageBox($winConfig, $STR{'errNoValidFile'}, $STR{'error'},0x40010); }
+      if ($START == 1) { Win32::GUI::MessageBox($winConfig, $STR{'errNoValidFile'}, $STR{'error'}, 0x40010); }
     }
   }
 
@@ -6542,17 +6534,23 @@ sub validIPv6DB
 #--------------------------#
 {
   # Local variables
-  my $refIPv6    = shift;
-  my $IPv6dbFile = $winConfig->tfIPv6DB->Text();
+  my $IPv6dbFile = shift;
+  my $first;
+  my $second;
   
-  # Open IPv6 CSV file and read first line
-  open my $IPv6_CSV, '<', $IPv6dbFile or Win32::GUI::MessageBox($win, $STR{'errReading'}.$!, $STR{'error'},0x40010);
-  my $firstLine = <$IPv6_CSV>; 
-  close $IPv6_CSV;
-  if ($firstLine =~ /^Prefix,/) { return(1); }
-  else                          { return(0); }  
+  # Open IPv6 CSV file and read first two lines
+  if (open(my $IPv6_CSV, '<', $IPv6dbFile)) {
+    while( my $line = <$IPv6_CSV>)  {
+      if (!$first) { $first  = $line;       }
+      else         { $second = $line; last; }
+    }
+    close $IPv6_CSV;
+    if ($first =~ /^Prefix,/ and $second =~ /^\d{4}\:/) { return(1); }
+  }
+  
+  return(0);
 
-}  #--- End validIPv4DB
+}  #--- End validIPv6DB
 
 #--------------------------#
 sub loadIPv6DB
@@ -6656,7 +6654,7 @@ sub updateTLDDB
     if ($answer == 7) { return(0); }
     
     # Answer is Yes, download the update
-    else { &downloadTLDDB(); }
+    else { &downloadTLDDB(0, $winConfig->tfTLDDB->Text()); }
     
   # TLDDB is up to date, show message if $confirm == 1
   } elsif ($upToDate == 1) {
@@ -6723,7 +6721,9 @@ sub downloadTLDDB
 #--------------------------#
 {
   # Local variables
-  my $localTLDDB    = $winConfig->tfTLDDB->Text();
+  my $winPbStatus   = shift; # Indicate if winPb is already displayed
+  # $winPbStatus = 1 if function called in Configuration Wizard, don't show status and return error instead of displaying it
+  my $localTLDDB    = shift; # Local filepath
   if (!$localTLDDB) { $localTLDDB = "$PROGDIR\\effective_tld_names.dat"; } # Default location
 
   # Start an agent
@@ -6738,8 +6738,10 @@ sub downloadTLDDB
   $winPb->pbWinPb->SetRange(0, 100);
   $winPb->pbWinPb->SetPos(0);
   $winPb->pbWinPb->SetStep(1);
-  $winPb->Center($win);
-  $winPb->Show();
+  if (!$winPbStatus) {
+    $winPb->Center($win);
+    $winPb->Show();
+  }
   
   # Check size of the remote file
   if (!$TOTAL_SIZE) {
@@ -6748,13 +6750,15 @@ sub downloadTLDDB
     my $return = $res->status_line;
     if ($res->code == 200) { $TOTAL_SIZE = $res->header('content_length'); }
     else {
-      Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errorConRemote'}...", $STR{'error'}, 0x40010);
-      # Turn off progress bar
-      $win->ChangeCursor($ARROW);
-      $winPb->lblPbCurr->Text('');
-      $winPb->lblCount->Text('');
-      $winPb->pbWinPb->SetPos(0);
-      &winPb_Terminate;
+      if (!$winPbStatus) {
+        # Turn off progress bar
+        $win->ChangeCursor($ARROW);
+        $winPb->lblPbCurr->Text('');
+        $winPb->lblCount->Text('');
+        $winPb->pbWinPb->SetPos(0);
+        &winPb_Terminate;
+        Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errorConRemote'}...", $STR{'error'}, 0x40010);
+      } else { return($STR{'errorConRemote'}); }
     }
   }
   
@@ -6787,32 +6791,43 @@ sub downloadTLDDB
     
     # Finished
     if (-T $localTLDDB) {
-      $winConfig->tfTLDDB->Text($localTLDDB);
-      # Turn off progress bar
-      $win->ChangeCursor($ARROW);
-      $winPb->lblPbCurr->Text('');
-      $winPb->lblCount->Text('');
-      $winPb->pbWinPb->SetPos(0);
-      &winPb_Terminate;
-      Win32::GUI::MessageBox($winConfig, $STR{'updatedTLDDB'}, $STR{'updateTLDDB'}, 0x40040);
+      if (!$winPbStatus) {
+        # Turn off progress bar
+        $win->ChangeCursor($ARROW);
+        $winPb->lblPbCurr->Text('');
+        $winPb->lblCount->Text('');
+        $winPb->pbWinPb->SetPos(0);
+        &winPb_Terminate;
+        # Update Config
+        $winConfig->tfTLDDB->Text($localTLDDB);
+        $CONFIG{'TLD_DB_FILE'} = $localTLDDB;
+        &saveConfig(\%CONFIG);
+        Win32::GUI::MessageBox($winConfig, $STR{'updatedTLDDB'}, $STR{'updateTLDDB'}, 0x40040);
+      } else {
+        $winConfig->tfTLDDB->Text($localTLDDB);
+        $CONFIG{'TLD_DB_FILE'} = $localTLDDB;
+      }
     } else {
-      Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadTLDDB'}...", $STR{'error'}, 0x40010);
+      if (!$winPbStatus) {
+        # Turn off progress bar
+        $win->ChangeCursor($ARROW);
+        $winPb->lblPbCurr->Text('');
+        $winPb->lblCount->Text('');
+        $winPb->pbWinPb->SetPos(0);
+        &winPb_Terminate;
+        Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadTLDDB'}...", $STR{'error'}, 0x40010);
+      } else { return($STR{'errDownloadTLDDB'}); }
+    }
+  } else {
+    if (!$winPbStatus) {
       # Turn off progress bar
       $win->ChangeCursor($ARROW);
       $winPb->lblPbCurr->Text('');
       $winPb->lblCount->Text('');
       $winPb->pbWinPb->SetPos(0);
       &winPb_Terminate;
-  }
-
-  } else {
-    Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadTLDDB'}...", $STR{'error'}, 0x40010);
-    # Turn off progress bar
-    $win->ChangeCursor($ARROW);
-    $winPb->lblPbCurr->Text('');
-    $winPb->lblCount->Text('');
-    $winPb->pbWinPb->SetPos(0);
-    &winPb_Terminate;
+      Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadTLDDB'}...", $STR{'error'}, 0x40010);
+    } else { return($STR{'errDownloadTLDDB'}); }
   }
   
   $TOTAL_SIZE = 0;
@@ -6849,7 +6864,7 @@ sub updateWSDB
     if ($answer == 7) { return(0); }
     
     # Answer is Yes, download the update
-    else { &downloadWSDB(); }
+    else { &downloadWSDB(0, $winConfig->tfWSDB->Text()); }
     
   # WSDB is up to date, show message if $confirm == 1
   } elsif ($upToDate == 1) {
@@ -6916,7 +6931,9 @@ sub downloadWSDB
 #--------------------------#
 {
   # Local variables
-  my $localWSDB     = $winConfig->tfWSDB->Text();
+  my $winPbStatus   = shift; # Indicate if winPb is already displayed
+  # $winPbStatus = 1 if function called in Configuration Wizard, don't show status and return error instead of displaying it
+  my $localWSDB     = shift; # Local filepath
   if (!$localWSDB)  { $localWSDB = "$PROGDIR\\tld.json"; } # Default location
   
   # Start an agent
@@ -6931,8 +6948,10 @@ sub downloadWSDB
   $winPb->pbWinPb->SetRange(0, 100);
   $winPb->pbWinPb->SetPos(0);
   $winPb->pbWinPb->SetStep(1);
-  $winPb->Center($win);
-  $winPb->Show();
+  if (!$winPbStatus) {
+    $winPb->Center($win);
+    $winPb->Show();
+  }
   
   # Check size of the remote file
   if (!$TOTAL_SIZE) {
@@ -6941,13 +6960,15 @@ sub downloadWSDB
     my $return = $res->status_line;
     if ($res->code == 200) { $TOTAL_SIZE = $res->header('content_length'); }
     else {
-      Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errorConRemote'}...", $STR{'error'}, 0x40010);
-      # Turn off progress bar
-      $win->ChangeCursor($ARROW);
-      $winPb->lblPbCurr->Text('');
-      $winPb->lblCount->Text('');
-      $winPb->pbWinPb->SetPos(0);
-      &winPb_Terminate;
+      if (!$winPbStatus) {
+        Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errorConRemote'}...", $STR{'error'}, 0x40010);
+        # Turn off progress bar
+        $win->ChangeCursor($ARROW);
+        $winPb->lblPbCurr->Text('');
+        $winPb->lblCount->Text('');
+        $winPb->pbWinPb->SetPos(0);
+        &winPb_Terminate;
+      } else { return($STR{'errorConRemote'}); }
     }
   }
   
@@ -6980,15 +7001,37 @@ sub downloadWSDB
     
     # Finished
     if (-T $localWSDB) {
-      $winConfig->tfWSDB->Text($localWSDB);
-      # Turn off progress bar
-      $win->ChangeCursor($ARROW);
-      $winPb->lblPbCurr->Text('');
-      $winPb->lblCount->Text('');
-      $winPb->pbWinPb->SetPos(0);
-      &winPb_Terminate;
-      Win32::GUI::MessageBox($winConfig, $STR{'updatedWSDB'}, $STR{'updateWSDB'}, 0x40040);
+      if (!$winPbStatus) {
+        # Turn off progress bar
+        $win->ChangeCursor($ARROW);
+        $winPb->lblPbCurr->Text('');
+        $winPb->lblCount->Text('');
+        $winPb->pbWinPb->SetPos(0);
+        if (!$winPbStatus) { &winPb_Terminate; }
+        # Update Config
+        $winConfig->tfWSDB->Text($localWSDB);
+        $CONFIG{'WS_DB_FILE'} = $localWSDB;
+        &saveConfig(\%CONFIG);
+        # Show final message
+        Win32::GUI::MessageBox($winConfig, $STR{'updatedWSDB'}, $STR{'updateWSDB'}, 0x40040);
+      } else {
+        $winConfig->tfWSDB->Text($localWSDB);
+        $CONFIG{'WS_DB_FILE'} = $localWSDB;
+      }
     } else {
+      if (!$winPbStatus) {
+        Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadWSDB'}...", $STR{'error'}, 0x40010);
+        # Turn off progress bar
+        $win->ChangeCursor($ARROW);
+        $winPb->lblPbCurr->Text('');
+        $winPb->lblCount->Text('');
+        $winPb->pbWinPb->SetPos(0);
+        &winPb_Terminate;
+      } else { return($STR{'errDownloadWSDB'}); }
+    }
+
+  } else {
+    if (!$winPbStatus) {
       Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadWSDB'}...", $STR{'error'}, 0x40010);
       # Turn off progress bar
       $win->ChangeCursor($ARROW);
@@ -6996,16 +7039,7 @@ sub downloadWSDB
       $winPb->lblCount->Text('');
       $winPb->pbWinPb->SetPos(0);
       &winPb_Terminate;
-    }
-
-  } else {
-    Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadWSDB'}...", $STR{'error'}, 0x40010);
-    # Turn off progress bar
-    $win->ChangeCursor($ARROW);
-    $winPb->lblPbCurr->Text('');
-    $winPb->lblCount->Text('');
-    $winPb->pbWinPb->SetPos(0);
-    &winPb_Terminate;
+    } else { return($STR{'errDownloadWSDB'}); }
   }
   
   $TOTAL_SIZE = 0;
@@ -7042,7 +7076,7 @@ sub updateIPv4DB
     if ($answer == 7) { return(0); }
     
     # Answer is Yes, download the update
-    else { &downloadIPv4DB(); }
+    else { &downloadIPv4DB(0, $winConfig->tfIPv4DB->Text()); }
     
   # IPv4DB is up to date, show message if $confirm == 1
   } elsif ($upToDate == 1) {
@@ -7108,19 +7142,27 @@ sub downloadIPv4DB
 #--------------------------#
 {
   # Local variables
-  my $localIPv4DB    = $winConfig->tfIPv4DB->Text();
+  my $winPbStatus   = shift; # Indicate if winPb is already displayed
+  # $winPbStatus = 1 if function called in Configuration Wizard, don't show status and return error instead of displaying it
+  my $localIPv4DB    = shift; # Local filepath
   if (!$localIPv4DB) { $localIPv4DB = "$PROGDIR\\ipv4-address-space.csv"; } # Default location
   
   # IPv4DB is small, useless to show progress bar
   $win->ChangeCursor($HOURGLASS);
   if (is_success(getstore($IPv4DB_CSV, $localIPv4DB))) {
     $winConfig->tfIPv4DB->Text($localIPv4DB);
-    $win->ChangeCursor($ARROW);
-    Win32::GUI::MessageBox($winConfig, $STR{'updatedIPv4DB'}, $STR{'updateIPv4DB'}, 0x40040);
+    $CONFIG{'IPv4_DB_FILE'} = $localIPv4DB;
+    if (!$winPbStatus) {
+      &saveConfig(\%CONFIG);
+      $win->ChangeCursor($ARROW);
+      Win32::GUI::MessageBox($winConfig, $STR{'updatedIPv4DB'}, $STR{'updateIPv4DB'}, 0x40040);
+    }
   # Error
   } else {
-    $win->ChangeCursor($ARROW);
-    Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadIPv4DB'}...", $STR{'error'}, 0x40010);
+    if (!$winPbStatus) {
+      $win->ChangeCursor($ARROW);
+      Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadIPv4DB'}...", $STR{'error'}, 0x40010);
+    } else { return($STR{'errDownloadIPv4DB'}); }
   }
   
 }  #--- End downloadIPv4DB
@@ -7155,7 +7197,7 @@ sub updateIPv6DB
     if ($answer == 7) { return(0); }
     
     # Answer is Yes, download the update
-    else { &downloadIPv6DB(); }
+    else { &downloadIPv6DB(0, $winConfig->tfIPv6DB->Text()); }
     
   # IPv6DB is up to date, show message if $confirm == 1
   } elsif ($upToDate == 1) {
@@ -7221,19 +7263,27 @@ sub downloadIPv6DB
 #--------------------------#
 {
   # Local variables
-  my $localIPv6DB    = $winConfig->tfIPv6DB->Text();
+  my $winPbStatus   = shift; # Indicate if winPb is already displayed
+  # $winPbStatus = 1 if function called in Configuration Wizard, don't show status and return error instead of displaying it
+  my $localIPv6DB    = shift; # Local filepath
   if (!$localIPv6DB) { $localIPv6DB = "$PROGDIR\\ipv6-unicast-address-assignments.csv"; } # Default location
   
   # IPv6DB is small, useless to show progress bar
   $win->ChangeCursor($HOURGLASS);
   if (is_success(getstore($IPv6DB_CSV, $localIPv6DB))) {
     $winConfig->tfIPv6DB->Text($localIPv6DB);
-    $win->ChangeCursor($ARROW);
-    Win32::GUI::MessageBox($winConfig, $STR{'updatedIPv6DB'}, $STR{'updateIPv6DB'}, 0x40040);
+    $CONFIG{'IPv6_DB_FILE'} = $localIPv6DB;
+    if (!$winPbStatus) {
+      &saveConfig(\%CONFIG);
+      $win->ChangeCursor($ARROW);
+      Win32::GUI::MessageBox($winConfig, $STR{'updatedIPv6DB'}, $STR{'updateIPv6DB'}, 0x40040);
+    }
   # Error
   } else {
-    $win->ChangeCursor($ARROW);
-    Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadIPv6DB'}...", $STR{'error'}, 0x40010);
+    if (!$winPbStatus) {
+      $win->ChangeCursor($ARROW);
+      Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadIPv6DB'}...", $STR{'error'}, 0x40010);
+    } else { return($STR{'errDownloadIPv6DB'}); }
   }
 
 }  #--- End downloadIPv6DB
@@ -7329,25 +7379,25 @@ sub loadConfig
   
   # TLD Database location
   if (exists($$refConfig{'TLD_DB_FILE'}) and
-      -f $$refConfig{'TLD_DB_FILE'})              { $winConfig->tfTLDDB->Text($$refConfig{'TLD_DB_FILE'}); $winConfig->chTLDDBAutoUpt->Enable(); }
+      -f $$refConfig{'TLD_DB_FILE'})              { $winConfig->tfTLDDB->Text($$refConfig{'TLD_DB_FILE'});                  }
   if (exists($$refConfig{'TLD_DB_AUTO_UPDATE'}))  { $winConfig->chTLDDBAutoUpt->Checked($$refConfig{'TLD_DB_AUTO_UPDATE'}); }
   else                                            { $winConfig->chTLDDBAutoUpt->Checked(1);                                 } # Default is checked
   
   # WS Database location
   if (exists($$refConfig{'WS_DB_FILE'}) and
-      -f $$refConfig{'WS_DB_FILE'})               { $winConfig->tfWSDB->Text($$refConfig{'WS_DB_FILE'});    $winConfig->chWSDBAutoUpt->Enable(); }
+      -f $$refConfig{'WS_DB_FILE'})               { $winConfig->tfWSDB->Text($$refConfig{'WS_DB_FILE'});                  }
   if (exists($$refConfig{'WS_DB_AUTO_UPDATE'}))   { $winConfig->chWSDBAutoUpt->Checked($$refConfig{'WS_DB_AUTO_UPDATE'}); }
   else                                            { $winConfig->chWSDBAutoUpt->Checked(1);                                } # Default is checked
   
   # IPv4 Database location
   if (exists($$refConfig{'IPv4_DB_FILE'}) and
-      -f $$refConfig{'IPv4_DB_FILE'})             { $winConfig->tfIPv4DB->Text($$refConfig{'IPv4_DB_FILE'}); $winConfig->chIPv4DBAutoUpt->Enable(); }
+      -f $$refConfig{'IPv4_DB_FILE'})             { $winConfig->tfIPv4DB->Text($$refConfig{'IPv4_DB_FILE'});                  }
   if (exists($$refConfig{'IPv4_DB_AUTO_UPDATE'})) { $winConfig->chIPv4DBAutoUpt->Checked($$refConfig{'IPv4_DB_AUTO_UPDATE'}); }
   else                                            { $winConfig->chIPv4DBAutoUpt->Checked(1);                                  } # Default is checked
   
   # IPv6 Database location
   if (exists($$refConfig{'IPv6_DB_FILE'}) and
-      -f $$refConfig{'IPv6_DB_FILE'})             { $winConfig->tfIPv6DB->Text($$refConfig{'IPv6_DB_FILE'}); $winConfig->chIPv6DBAutoUpt->Enable(); }
+      -f $$refConfig{'IPv6_DB_FILE'})             { $winConfig->tfIPv6DB->Text($$refConfig{'IPv6_DB_FILE'});                  }
   if (exists($$refConfig{'IPv6_DB_AUTO_UPDATE'})) { $winConfig->chIPv6DBAutoUpt->Checked($$refConfig{'IPv6_DB_AUTO_UPDATE'}); }
   else                                            { $winConfig->chIPv6DBAutoUpt->Checked(1);                                  } # Default is checked
 

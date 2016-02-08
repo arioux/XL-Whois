@@ -47,6 +47,9 @@ What do you need
 
 Versions History
 ----------------
+* Version 2.1
+	- Fixed various issues with the Configuration Wizard
+	- Fixed various issues with database changes in the GUI
 * Version 2.0
 	- New taskbar shortcuts
 		- Whois function is now enabled or disabled depending if there are items in clipboard
