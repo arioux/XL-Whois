@@ -9,8 +9,8 @@
 #               into a database that can be used with other tools of the
 #               XL-Toolkit.
 # Creation    : 2015-09-30
-# Modified    : 2016-02-06
-my $VERSION   = "1.1";
+# Modified    : 2016-02-07
+my $VERSION   = "2.0";
 # Author      : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
