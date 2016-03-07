@@ -5750,8 +5750,15 @@ sub tfReportDir_Change
   
   # Remember
   if ($saveDir and -d $saveDir) {
-      $CONFIG{'DIR_REPORT'} = $saveDir;
-      &saveConfig(\%CONFIG);
+    $CONFIG{'DIR_REPORT'} = $saveDir;
+    &saveConfig(\%CONFIG);
+  } else { # Invalid file or no file
+    delete($CONFIG{'DIR_REPORT'});
+    &saveConfig(\%CONFIG);
+    if ($saveDir) {
+      $winConfig->tfReportDir->Text('');
+      if ($START == 1) { Win32::GUI::MessageBox($winConfig, $STR{'errNoValidFile'}, $STR{'error'}, 0x40010); }
+    }
   }
   
   # Ready ?
@@ -5876,7 +5883,7 @@ sub tfLogDbFile_Change
         $winConfig->chLogActivate->Enable();
         $win->chCheckLogging->Enable();
         &saveConfig(\%CONFIG);
-      } else {
+      } else { # Invalid database
         delete($CONFIG{'LOGGING_DB_FILE'});
         $winConfig->chLogActivate->Checked(0);
         $winConfig->chLogActivate->Disable();
@@ -5890,6 +5897,23 @@ sub tfLogDbFile_Change
         $winConfig->tfLogDbFile->Text('');
       }
     });
+  } else { # Invalid file or no file
+    delete($CONFIG{'LOGGING_DB_FILE'});
+    $winConfig->chLogActivate->Checked(0);
+    $winConfig->chLogActivate->Disable();
+    $CONFIG{'LOGGING'} = 0;
+    $win->chCheckLogging->Checked(0);
+    $win->chCheckLogging->Disable();
+    $CONFIG{'CHECK_LOGGING_DB'} = 0;
+    $win->tfComment->Text('');
+    $win->tfComment->Disable();
+    &saveConfig(\%CONFIG);
+    if ($dbLogFile) {
+      $winConfig->tfLogDbFile->Text('');
+      if ($START == 1) { Win32::GUI::MessageBox($winConfig, $STR{'errNoValidFile'}, $STR{'error'}, 0x40010); }
+    }
+    # Ready ?
+    if ($START == 1) { &isWhoisReady(0); }
   }
 
 }  #--- End tfLogDbFile_Change
@@ -6030,7 +6054,7 @@ sub tfDbFile_Change
       if(&loadWhoisDB) {
         $CONFIG{'WHOIS_DB_FILE'} = $dbFile;
         &saveConfig(\%CONFIG);
-      } else {
+      } else { # Invalid database
         delete($CONFIG{'WHOIS_DB_FILE'});
         $win->cbCheckWhoisDB->SetCurSel(0);
         $CONFIG{'CHECK_WHOIS_DB'} = 0;
@@ -6042,6 +6066,19 @@ sub tfDbFile_Change
       # Ready ?
       if ($START == 1) { &isWhoisReady(0); }
     });
+  } else { # Invalid file or no file
+    delete($CONFIG{'WHOIS_DB_FILE'});
+    $win->cbCheckWhoisDB->SetCurSel(0);
+    $CONFIG{'CHECK_WHOIS_DB'} = 0;
+    $winConfig->chDBCache->Checked(0);
+    $CONFIG{'WHOIS_CACHE'} = 0;
+    &saveConfig(\%CONFIG);
+    if ($dbFile) {
+      $winConfig->tfDbFile->Text('');
+      if ($START == 1) { Win32::GUI::MessageBox($winConfig, $STR{'errNoValidFile'}, $STR{'error'}, 0x40010); }
+    }
+    # Ready ?
+    if ($START == 1) { &isWhoisReady(0); }
   }
 
 }  #--- End tfDbFile_Change
@@ -6192,7 +6229,6 @@ sub tfTLDDB_Change
     $CONFIG{'TLD_DB_FILE'} = $TLDdbFile;
     &saveConfig(\%CONFIG);
   } else {
-    $winConfig->tfTLDDB->Text('');
     delete($CONFIG{'TLD_DB_FILE'});
     &saveConfig(\%CONFIG);
     if ($TLDdbFile) {
@@ -6288,7 +6324,6 @@ sub tfWSDB_Change
     $CONFIG{'WS_DB_FILE'} = $WSdbFile;
     &saveConfig(\%CONFIG);
   } else {
-    $winConfig->tfWSDB->Text('');
     delete($CONFIG{'WS_DB_FILE'});
     &saveConfig(\%CONFIG);
     if ($WSdbFile) {
@@ -6384,7 +6419,6 @@ sub tfIPv4DB_Change
     $CONFIG{'IPv4_DB_FILE'} = $IPv4dbFile;
     &saveConfig(\%CONFIG);
   } else {
-    $winConfig->tfIPv4DB->Text('');
     delete($CONFIG{'IPv4_DB_FILE'});
     &saveConfig(\%CONFIG);
     if ($IPv4dbFile) {
@@ -6518,7 +6552,6 @@ sub tfIPv6DB_Change
     $CONFIG{'IPv6_DB_FILE'} = $IPv6dbFile;
     &saveConfig(\%CONFIG);
   } else {
-    $winConfig->tfIPv6DB->Text('');
     delete($CONFIG{'IPv6_DB_FILE'});
     &saveConfig(\%CONFIG);
     if ($IPv6dbFile) {
@@ -6757,8 +6790,8 @@ sub downloadTLDDB
         $winPb->lblCount->Text('');
         $winPb->pbWinPb->SetPos(0);
         &winPb_Terminate;
-        Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errorConRemote'}...", $STR{'error'}, 0x40010);
-      } else { return($STR{'errorConRemote'}); }
+        Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errConnection'}...", $STR{'error'}, 0x40010);
+      } else { return($STR{'errConnection'}); }
     }
   }
   
@@ -6961,14 +6994,14 @@ sub downloadWSDB
     if ($res->code == 200) { $TOTAL_SIZE = $res->header('content_length'); }
     else {
       if (!$winPbStatus) {
-        Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errorConRemote'}...", $STR{'error'}, 0x40010);
         # Turn off progress bar
         $win->ChangeCursor($ARROW);
         $winPb->lblPbCurr->Text('');
         $winPb->lblCount->Text('');
         $winPb->pbWinPb->SetPos(0);
         &winPb_Terminate;
-      } else { return($STR{'errorConRemote'}); }
+        Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errConnection'}...", $STR{'error'}, 0x40010);
+      } else { return($STR{'errConnection'}); }
     }
   }
   
@@ -7020,25 +7053,25 @@ sub downloadWSDB
       }
     } else {
       if (!$winPbStatus) {
-        Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadWSDB'}...", $STR{'error'}, 0x40010);
         # Turn off progress bar
         $win->ChangeCursor($ARROW);
         $winPb->lblPbCurr->Text('');
         $winPb->lblCount->Text('');
         $winPb->pbWinPb->SetPos(0);
         &winPb_Terminate;
+        Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadWSDB'}...", $STR{'error'}, 0x40010);
       } else { return($STR{'errDownloadWSDB'}); }
     }
 
   } else {
     if (!$winPbStatus) {
-      Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadWSDB'}...", $STR{'error'}, 0x40010);
       # Turn off progress bar
       $win->ChangeCursor($ARROW);
       $winPb->lblPbCurr->Text('');
       $winPb->lblCount->Text('');
       $winPb->pbWinPb->SetPos(0);
       &winPb_Terminate;
+      Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadWSDB'}...", $STR{'error'}, 0x40010);
     } else { return($STR{'errDownloadWSDB'}); }
   }
   

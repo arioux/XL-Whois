@@ -11,7 +11,7 @@ GitHub		: https://github.com/arioux/XL-Whois
 Development
 -----------
 
-ExtractFace has been developped using ActivePerl 5.16.3 with the 
+XL-Whois has been developped using ActivePerl 5.16.3 with the 
 following modules installed:
 
 - Encode (v2.56)
