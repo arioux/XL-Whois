@@ -1183,50 +1183,6 @@ $winPb->AddButton(      -name        => 'btnCancel'      ,
                         -cancel      => 1                , );
 
 #------------------------------------------------------------------------------#
-# About window
-#------------------------------------------------------------------------------#
-my $winAbout  = Win32::GUI::DialogBox->new( -name        => 'winAbout'                ,
-                                            -parent      => $win                      ,
-                                            -text        => $STR{'about'}.' XL-Whois' ,
-                                            -pos         => [$winPosX, $winPosY]      ,
-                                            -size        => [520, 170]                ,
-                                            -background  => [255, 255, 255]           ,
-                                            -hasmaximize => 0                         ,
-                                            -hasminimize => 1                         ,
-                                            -helpbutton  => 0                         ,
-                                            -resizable   => 0                         ,
-                                            -dialogui    => 1                         , );
-$winAbout->SetIcon($winICO);
-
-# About tab
-$winAbout->AddLabel(  -name        => 'lblLogo128'            ,
-                      -size        => [128,128]               ,
-                      -pos         => [  0,  5]               ,
-                      -background  => [255, 255, 255]         ,
-                      -bitmap      => $logo128Bmp             , );
-$winAbout->AddLabel(  -name        => 'lblAbout1'             ,
-                      -size        => [ 90, 75]               ,
-                      -pos         => [140, 10]               ,
-                      -font        => $font10                 ,
-                      -foreground  => [0  , 0  , 102]         ,
-                      -background  => [255, 255, 255]         ,
-                      -text        => "$STR{'version'}:\n$STR{'website'}:\n$STR{'author'}:\n$STR{'translatedBy'}:", );
-$winAbout->AddLabel(  -name        => 'lblAbout2'             ,
-                      -size        => [230, 75]               ,
-                      -pos         => [235, 10]               ,
-                      -font        => $font10                 ,
-                      -foreground  => [185, 154,   0]         ,
-                      -background  => [255, 255, 255]         ,
-                      -text        => "$VERSION\nhttp://www.le-tools.com\nAlain Rioux (admin\@le-tools.com)\n$STR{'translatorName'}", );
-$winAbout->AddLabel(  -name        => 'lblAbout3'             ,
-                      -size        => [300, 20]               ,
-                      -pos         => [140, 80]               ,
-                      -font        => $font10                 ,
-                      -foreground  => [0  , 0  , 102]         ,
-                      -background  => [255, 255, 255]         ,
-                      -text        => '© Copyright 2015-2016 Alain Rioux', );
-
-#------------------------------------------------------------------------------#
 # Starting program
 #------------------------------------------------------------------------------#
 
@@ -1813,13 +1769,13 @@ sub importLogDB_Click
 #--------------------------#
 {
   # Local variables
-  my $logFile = $win->GetOpenFileName(-owner            => $winLogDB        ,
-                                      -title            => $STR{'selectLogFile'},
-                                      -defaultfilter    => 0                ,
-                                      -directory        => $PROGDIR         ,
-                                      -file             => 'Logging_db.txt' ,
-                                      -defaultextension => 'txt'            ,
-                                      -explorer         => 1                , );
+  my $logFile = Win32::GUI::GetOpenFileName(-owner            => $winLogDB            ,
+                                            -title            => $STR{'selectLogFile'},
+                                            -defaultfilter    => 0                    ,
+                                            -directory        => $PROGDIR             ,
+                                            -file             => 'Logging_db.txt'     ,
+                                            -defaultextension => 'txt'                ,
+                                            -explorer         => 1                    , );
   
   # Selected file
   if ($logFile and -T $logFile) {
@@ -2279,11 +2235,11 @@ sub btnImportDB_Click
 #--------------------------#
 {
   # Show OpenFile dialog window
-  my $importFile = $winDB->GetOpenFileName( -owner         => $winDB         ,
-                                            -title         => $STR{'btnDbFileTip'}.':',
-                                            -defaultfilter => 0              ,
-                                            -filemustexist => 1              ,
-                                            -explorer      => 1              , );
+  my $importFile = Win32::GUI::GetOpenFileName( -owner         => $winDB                  ,
+                                                -title         => $STR{'btnDbFileTip'}.':',
+                                                -defaultfilter => 0                       ,
+                                                -filemustexist => 1                       ,
+                                                -explorer      => 1                       , );
 
   # Selected file
   if ($importFile and -T $importFile) {
@@ -2530,11 +2486,11 @@ sub btnExtract2DB_Click
     Win32::GUI::MessageBox($win, $STR{'errProcessRun'},$STR{'error'},0x40010);
   } else {
     # Show OpenFile dialog window
-    my @target = $winDB->GetOpenFileName( -owner         => $winDB         ,
-                                          -title         => $STR{'selectFileExtract'},
-                                          -filemustexist => 1              ,
-                                          -multisel      => 1              ,
-                                          -explorer      => 1              , );
+    my @target = Win32::GUI::GetOpenFileName( -owner         => $winDB                    ,
+                                              -title         => $STR{'selectFileExtract'} ,
+                                              -filemustexist => 1                         ,
+                                              -multisel      => 1                         ,
+                                              -explorer      => 1                         , );
     # List the target files, must be readable
     my @listFiles;
     my $target = shift(@target);
@@ -5089,6 +5045,48 @@ sub btnHelp_Click
 sub btnAbout_Click
 #--------------------------#
 {
+  # Create the window
+  my $winAbout  = Win32::GUI::DialogBox->new( -name        => 'winAbout'                ,
+                                              -parent      => $win                      ,
+                                              -text        => $STR{'about'}.' XL-Whois' ,
+                                              -pos         => [$winPosX, $winPosY]      ,
+                                              -size        => [520, 170]                ,
+                                              -background  => [255, 255, 255]           ,
+                                              -hasmaximize => 0                         ,
+                                              -hasminimize => 1                         ,
+                                              -helpbutton  => 0                         ,
+                                              -resizable   => 0                         ,
+                                              -dialogui    => 1                         , );
+  $winAbout->SetIcon($winICO);
+  
+  # About tab
+  $winAbout->AddLabel(  -name        => 'lblLogo128'            ,
+                        -size        => [128,128]               ,
+                        -pos         => [  0,  5]               ,
+                        -background  => [255, 255, 255]         ,
+                        -bitmap      => $logo128Bmp             , );
+  $winAbout->AddLabel(  -name        => 'lblAbout1'             ,
+                        -size        => [ 90, 75]               ,
+                        -pos         => [140, 10]               ,
+                        -font        => $font10                 ,
+                        -foreground  => [0  , 0  , 102]         ,
+                        -background  => [255, 255, 255]         ,
+                        -text        => "$STR{'version'}:\n$STR{'website'}:\n$STR{'author'}:\n$STR{'translatedBy'}:", );
+  $winAbout->AddLabel(  -name        => 'lblAbout2'             ,
+                        -size        => [230, 75]               ,
+                        -pos         => [235, 10]               ,
+                        -font        => $font10                 ,
+                        -foreground  => [185, 154,   0]         ,
+                        -background  => [255, 255, 255]         ,
+                        -text        => "$VERSION\nhttp://www.le-tools.com\nAlain Rioux (admin\@le-tools.com)\n$STR{'translatorName'}", );
+  $winAbout->AddLabel(  -name        => 'lblAbout3'             ,
+                        -size        => [300, 20]               ,
+                        -pos         => [140, 80]               ,
+                        -font        => $font10                 ,
+                        -foreground  => [0  , 0  , 102]         ,
+                        -background  => [255, 255, 255]         ,
+                        -text        => '© Copyright 2015-2016 Alain Rioux', );
+  
   $winAbout->Center($win);
   $winAbout->DoModal();
   return(1);
@@ -5932,14 +5930,14 @@ sub btnLogDbFile_Click
     if (pop(@parts) =~ /\./) {
       while ($lastDir =~ /[^\\]$/) { chop($lastDir); }
     }
-    $logDbFile = $winConfig->GetOpenFileName( -owner         => $winConfig                  ,
+    $logDbFile = Win32::GUI::GetOpenFileName( -owner         => $winConfig                  ,
                                               -title         => $STR{'btnLogDbFileTip'}.':' ,
                                               -defaultfilter => 0                           ,
                                               -filemustexist => 1                           ,
                                               -directory     => $lastDir                    ,
                                               -explorer      => 1                           , );
   } else {
-    $logDbFile = $winConfig->GetOpenFileName( -owner         => $winConfig                  ,
+    $logDbFile = Win32::GUI::GetOpenFileName( -owner         => $winConfig                  ,
                                               -title         => $STR{'btnLogDbFileTip'}.':' ,
                                               -defaultfilter => 0                           ,
                                               -filemustexist => 1                           ,
@@ -5955,7 +5953,7 @@ sub btnLogDbFile_Click
 sub btnLogDbFileNew_Click
 #--------------------------#
 {
-  my $logDbFile = $winConfig->GetOpenFileName(-owner            => $winConfig           ,
+  my $logDbFile = Win32::GUI::GetOpenFileName(-owner            => $winConfig           ,
                                               -title            => $STR{'btnLogDbFileNew'},
                                               -defaultfilter    => 0              ,
                                               -directory        => $PROGDIR       ,
@@ -6097,7 +6095,7 @@ sub btnDbFile_Click
     if (pop(@parts) =~ /\./) {
       while ($lastDir =~ /[^\\]$/) { chop($lastDir); }
     }
-    $dbFile = $winConfig->GetOpenFileName(  -owner         => $winConfig              ,
+    $dbFile = Win32::GUI::GetOpenFileName(  -owner         => $winConfig              ,
                                             -title         => $STR{'btnDbFileTip'}.':',
                                             -defaultfilter => 0                       ,
                                             -file          => 'Whois.db'              ,
@@ -6105,7 +6103,7 @@ sub btnDbFile_Click
                                             -directory     => $lastDir                ,
                                             -explorer      => 1                       , );
   } else {
-    $dbFile = $winConfig->GetOpenFileName(  -owner         => $winConfig              ,
+    $dbFile = Win32::GUI::GetOpenFileName(  -owner         => $winConfig              ,
                                             -title         => $STR{'btnDbFileTip'}.':',
                                             -defaultfilter => 0                       ,
                                             -file          => 'Whois.db'              ,
@@ -6125,7 +6123,7 @@ sub btnDbFile_Click
 sub btnDbFileNew_Click
 #--------------------------#
 {
-  my $dbFile = $winConfig->GetOpenFileName( -owner            => $winConfig          ,
+  my $dbFile = Win32::GUI::GetOpenFileName( -owner            => $winConfig          ,
                                             -title            => $STR{'btnDbFileNew'},
                                             -defaultfilter    => 0                   ,
                                             -directory        => $PROGDIR            ,
@@ -6267,7 +6265,7 @@ sub btnTLDDB_Click
     if (pop(@parts) =~ /\./) {
       while ($lastDir =~ /[^\\]$/) { chop($lastDir); }
     }
-    $TLDdbFile = $winConfig->GetOpenFileName( -owner         => $winConfig                ,
+    $TLDdbFile = Win32::GUI::GetOpenFileName( -owner         => $winConfig                ,
                                               -title         => $STR{'btnTLDDBTip'}.':'   ,
                                               -defaultfilter => 0                         ,
                                               -filemustexist => 1                         ,
@@ -6275,7 +6273,7 @@ sub btnTLDDB_Click
                                               -file          => 'effective_tld_names.dat' ,
                                               -explorer      => 1                         , );
   } else {
-    $TLDdbFile = $winConfig->GetOpenFileName( -owner         => $winConfig                ,
+    $TLDdbFile = Win32::GUI::GetOpenFileName( -owner         => $winConfig                ,
                                               -title         => $STR{'btnTLDDBTip'}.':'   ,
                                               -defaultfilter => 0                         ,
                                               -filemustexist => 1                         ,
@@ -6362,7 +6360,7 @@ sub btnWSDB_Click
     if (pop(@parts) =~ /\./) {
       while ($lastDir =~ /[^\\]$/) { chop($lastDir); }
     }
-    $WSdbFile = $winConfig->GetOpenFileName(  -owner         => $winConfig            ,
+    $WSdbFile = Win32::GUI::GetOpenFileName(  -owner         => $winConfig            ,
                                               -title         => $STR{'btnWSDBTip'}.':',
                                               -defaultfilter => 0                     ,
                                               -filemustexist => 1                     ,
@@ -6370,7 +6368,7 @@ sub btnWSDB_Click
                                               -file          => 'tld.json'            ,
                                               -explorer      => 1                     , );
   } else {
-    $WSdbFile = $winConfig->GetOpenFileName(  -owner         => $winConfig            ,
+    $WSdbFile = Win32::GUI::GetOpenFileName(  -owner         => $winConfig            ,
                                               -title         => $STR{'btnWSDBTip'}.':',
                                               -defaultfilter => 0                     ,
                                               -filemustexist => 1                     ,
@@ -6495,7 +6493,7 @@ sub btnIPv4DB_Click
     if (pop(@parts) =~ /\./) {
       while ($lastDir =~ /[^\\]$/) { chop($lastDir); }
     }
-    $IPv4dbFile = $winConfig->GetOpenFileName(-owner         => $winConfig                ,
+    $IPv4dbFile = Win32::GUI::GetOpenFileName(-owner         => $winConfig                ,
                                               -title         => $STR{'btnIPv4DBTip'}.':'  ,
                                               -defaultfilter => 0                         ,
                                               -filemustexist => 1                         ,
@@ -6503,7 +6501,7 @@ sub btnIPv4DB_Click
                                               -file          => 'ipv4-address-space.csv'  ,
                                               -explorer      => 1                         , );
   } else {
-    $IPv4dbFile = $winConfig->GetOpenFileName(-owner         => $winConfig                ,
+    $IPv4dbFile = Win32::GUI::GetOpenFileName(-owner         => $winConfig                ,
                                               -title         => $STR{'btnIPv4DBTip'}.':'  ,
                                               -defaultfilter => 0                         ,
                                               -filemustexist => 1                         ,
@@ -6627,7 +6625,7 @@ sub btnIPv6DB_Click
     if (pop(@parts) =~ /\./) {
       while ($lastDir =~ /[^\\]$/) { chop($lastDir); }
     }
-    $IPv6dbFile = $winConfig->GetOpenFileName(-owner         => $winConfig                              ,
+    $IPv6dbFile = Win32::GUI::GetOpenFileName(-owner         => $winConfig                              ,
                                               -title         => $STR{'btnIPv6DBTip'}.':'                ,
                                               -defaultfilter => 0                                       ,
                                               -filemustexist => 1                                       ,
@@ -6635,7 +6633,7 @@ sub btnIPv6DB_Click
                                               -file          => 'ipv6-unicast-address-assignments.csv'  ,
                                               -explorer      => 1                                       , );
   } else {
-    $IPv6dbFile = $winConfig->GetOpenFileName(-owner         => $winConfig                              ,
+    $IPv6dbFile = Win32::GUI::GetOpenFileName(-owner         => $winConfig                              ,
                                               -title         => $STR{'btnIPv6DBTip'}.':'                ,
                                               -defaultfilter => 0                                       ,
                                               -filemustexist => 1                                       ,
