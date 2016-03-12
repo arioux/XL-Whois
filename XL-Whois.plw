@@ -9,8 +9,8 @@
 #               into a database that can be used with other tools of the
 #               XL-Toolkit.
 # Creation    : 2015-09-30
-# Modified    : 2016-02-08
-my $VERSION   = "2.1";
+# Modified    : 2016-03-12
+my $VERSION   = "2.2";
 # Author      : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
@@ -89,6 +89,7 @@ my $START = 0;                                                                 #
 my $ARROW           :shared;                                                   # Arrow pointer
 my $HOURGLASS       :shared;                                                   # Hourglass pointer
 my $THR;                                                                       # Thread
+my $THR_UPDATE;                                                                # Thread for update
 my $LISTNO          = 0;                                                       # For CTRL+A
 my $NBR_CHARS       = 0;                                                       # Number of CHAR in search DB
 my $ADD_FILTER      = 0;                                                       # Indicate that filter must be added to current value
@@ -103,7 +104,8 @@ my $TLDDB;                                                                     #
 my ($winICO, $logoBmp, $logo128Bmp, $browseBmp, $openDirBmp, $fileOpenBmp, $fileNewBmp,
     $downloadBmp, $clipboardBmp, $whoisBmp, $databaseBmp, $config32Bmp, $config128Bmp,
     $helpBmp, $aboutBmp, $exportBmp, $importBmp, $extractBmp, $validdbBmp, $searchDB,
-    $searchDB_p, $searchDB_n, $filterDB, $filterDB_p, $filterDB_n, $database16) = &loadGraph();
+    $searchDB_p, $searchDB_n, $filterDB, $filterDB_p, $filterDB_n, $database16,
+    $checkBmp, $errorBmp) = &loadGraph();
 
 #------------------------------------------------------------------------------#
 # Strings
@@ -124,6 +126,9 @@ my $winHeight = 317;
 my $winPosX   = ($scrnX - $winWidth)  / 2;
 my $winPosY   = ($scrnY - $winHeight) / 2;
 
+# Keyboard shorcut
+my $accel = new Win32::GUI::AcceleratorTable("Ctrl-A" => "selectAll");
+
 # Main Window
 my $win = Win32::GUI::Window->new( -name        => 'winMain'                           ,
                                    -text        => 'XL-Whois'                          ,
@@ -131,7 +136,8 @@ my $win = Win32::GUI::Window->new( -name        => 'winMain'                    
                                    -size        => [$winWidth, $winHeight]             ,
                                    -pos         => [$winPosX , $winPosY]               ,
                                    -resizable   => 0                                   ,
-                                   -hasmaximize => 0                                   , );
+                                   -hasmaximize => 0                                   , 
+                                   -accel       => $accel                              , );
 $win->SetIcon($winICO);
 
 # Fonts
@@ -343,7 +349,8 @@ my $winClip = Win32::GUI::Window->new( -name        => 'winClip'             ,
                                        -hasmaximize => 1                     ,
                                        -hasminimize => 1                     ,
                                        -resizable   => 1                     ,
-                                       -dialogui    => 1                     , );
+                                       -dialogui    => 1                     , 
+                                       -accel       => $accel                , );
 $winClip->SetIcon($winICO);
 $winClip->AddTextfield( -name        => 'tfClip'            ,
                         -size        => [$winWidth-25, $winHeight-85] ,
@@ -1189,27 +1196,20 @@ $winPb->AddButton(      -name        => 'btnCancel'      ,
 if (-T $CONFIG_FILE) {
   &loadConfig(\%CONFIG);
 
-  # Update tool and database
-  if ($CONFIG{'TOOL_AUTO_UPDATE'} or $CONFIG{'TLD_DB_AUTO_UPDATE'} or $CONFIG{'WS_DB_AUTO_UPDATE'} or $CONFIG{'IPv4_DB_AUTO_UPDATE'} or $CONFIG{'IPv6_DB_AUTO_UPDATE'}) {
-    threads->create(sub {
-      # Update Tool ?
-      if ($CONFIG{'TOOL_AUTO_UPDATE'})    { &updateTool(0);   }
-      # Update TLDDB ?
-      if ($CONFIG{'TLD_DB_AUTO_UPDATE'} ) { &updateTLDDB(0);  }
-      # Update Whois Server DB ?
-      if ($CONFIG{'WS_DB_AUTO_UPDATE'}  ) { &updateWSDB(0);   }
-      # Update IPv4 DB ?
-      if ($CONFIG{'IPv4_DB_AUTO_UPDATE'}) { &updateIPv4DB(0); }
-      # Update IPv6 DB ?
-      if ($CONFIG{'IPv6_DB_AUTO_UPDATE'}) { &updateIPv6DB(0); }
-    });
+    # Check update for tool and databases ?
+  if ($CONFIG{'TOOL_AUTO_UPDATE'}    or $CONFIG{'TLD_DB_AUTO_UPDATE'} or $CONFIG{'WS_DB_AUTO_UPDATE'} or
+      $CONFIG{'IPv4_DB_AUTO_UPDATE'} or $CONFIG{'IPv6_DB_AUTO_UPDATE'}) {
+    $THR_UPDATE = threads->create(sub { &updateAll(); });
   }
 
   &isWhoisReady(0);
   
 } else {
+  # Create the Configuration Wizard Window
+  my $refWinCW = &createCW();
+  
   # First start of the tool, Load configuration wizard
-  threads->create(sub { &firstStart; });
+  $THR_UPDATE = threads->create(sub { &firstStart($refWinCW); });
 }
 
 $START = 1;
@@ -1381,6 +1381,14 @@ sub tfClip_Change
   else          { $winClip->btnClipEdit->Disable(); }
 
 }  #--- End tfClip_Change
+
+#--------------------------#
+sub tfClip_GotFocus
+#--------------------------#
+{
+  $LISTNO = 3;
+
+}  #--- End tfClip_GotFocus
 
 #--------------------------#
 sub btnClipOk_Click
@@ -1886,12 +1894,12 @@ sub exportLogDB_Click
   my $logDbFile = $winConfig->tfLogDbFile->Text();
   
   # Show SaveFileWindow
-  my $file = $winLogDB->GetSaveFileName(-owner            => $winLogDB                ,
-                                        -title            => $STR{'btnExportDBTip'}.':',
-                                        -file             => 'Logging_db.txt'         ,
-                                        -defaultextension => 'txt'                    ,
-                                        -createprompt     => 1                        ,
-                                        -explorer         => 1                        , );
+  my $file = Win32::GUI::GetSaveFileName( -owner            => $winLogDB                  ,
+                                          -title            => $STR{'btnExportDBTip'}.':' ,
+                                          -file             => 'Logging_db.txt'           ,
+                                          -defaultextension => 'txt'                      ,
+                                          -createprompt     => 1                          ,
+                                          -explorer         => 1                          , );
   if ($file) {
     $THR = threads->create(sub {
       # Thread 'cancellation' signal handler
@@ -2199,11 +2207,7 @@ sub loadWhoisDB
         $winDB->DBGrid->SetCellEditable($i, 3, 1);
         $winDB->DBGrid->SetCellEditable($i, 4, 0);
         # If Network Whois Data exist, set background color to green
-        my $filename = "$ipStart\-$ipEnd\.txt";
-        my $whoisDir = $winConfig->tfDbFile->Text();
-        my(@partsWhoisDBPath) = split(/\\/, $whoisDir);
-        if (pop(@partsWhoisDBPath) =~ /\./) { while ($whoisDir =~ /[^\\]$/) { chop($whoisDir); } }
-        my $networkWhoisDataFile = $whoisDir."cache\\$filename";
+        my $networkWhoisDataFile = "$CONFIG{'WHOIS_DATA_CACHE'}\\$ipStart\-$ipEnd\.txt";
         if (-T $networkWhoisDataFile) {
           $winDB->DBGrid->SetCellBkColor($i, 0, 0x33FF66);
           $winDB->DBGrid->SetCellBkColor($i, 1, 0x33FF66);
@@ -2211,7 +2215,6 @@ sub loadWhoisDB
           $winDB->DBGrid->SetCellBkColor($i, 3, 0x33FF66);
           $winDB->DBGrid->SetCellBkColor($i, 4, 0x33FF66);
         }
-        
         $i++;
       }
       
@@ -2373,7 +2376,7 @@ sub feedWhoisDatabase
       else {
         my $return = &addISP(\$dbh, \@fieldsNewISP);
         if ($return) {
-          &addISPGrid(\@fieldsNewISP);
+          my $lineInGrid = &addISPGrid(\@fieldsNewISP);
           $nbrAdd++;
         }
       }
@@ -2393,12 +2396,12 @@ sub btnExportDB_Click
   my $whoisDB = $winConfig->tfDbFile->Text();
   
   # Show SaveFileWindow
-  my $file = $winDB->GetSaveFileName(   -owner            => $winDB           ,
-                                        -title            => $STR{'btnExportDBTip'}.':',
-                                        -file             => 'ISPdb.txt'      ,
-                                        -defaultextension => 'txt'            ,
-                                        -createprompt     => 1                ,
-                                        -explorer         => 1                , );
+  my $file = Win32::GUI::GetSaveFileName( -owner            => $winDB                     ,
+                                          -title            => $STR{'btnExportDBTip'}.':' ,
+                                          -file             => 'ISPdb.txt'                ,
+                                          -defaultextension => 'txt'                      ,
+                                          -createprompt     => 1                          ,
+                                          -explorer         => 1                          , );
   if ($file) {
     $THR = threads->create(sub {
       # Thread 'cancellation' signal handler
@@ -3782,19 +3785,7 @@ sub addISPGrid
     $winDB->DBGrid->SetCellText($newLine, 2, $$refNewISP[2]);
     $winDB->DBGrid->SetCellText($newLine, 3, $$refNewISP[3]);
     $winDB->DBGrid->SetCellText($newLine, 4, $$refNewISP[4]);
-    # If Network Whois Data exist, set background color to green
-    my $filename = "$$refNewISP[0]\-$$refNewISP[1]\.txt";
-    my $whoisDir = $winConfig->tfDbFile->Text();
-    my(@partsWhoisDBPath) = split(/\\/, $whoisDir);
-    if (pop(@partsWhoisDBPath) =~ /\./) { while ($whoisDir =~ /[^\\]$/) { chop($whoisDir); } }
-    my $networkWhoisDataFile = $whoisDir."cache\\$filename";
-    if (-T $networkWhoisDataFile) {
-      $winDB->DBGrid->SetCellBkColor($newLine, 0, 0x33FF66);
-      $winDB->DBGrid->SetCellBkColor($newLine, 1, 0x33FF66);
-      $winDB->DBGrid->SetCellBkColor($newLine, 2, 0x33FF66);
-      $winDB->DBGrid->SetCellBkColor($newLine, 3, 0x33FF66);
-      $winDB->DBGrid->SetCellBkColor($newLine, 4, 0x33FF66);
-    }
+    return($newLine);
   } else { Win32::GUI::MessageBox($win, $STR{'errNewLine'}, $STR{'error'}, 0x40010); }
   
 }  #--- End addISPGrid
@@ -3844,18 +3835,15 @@ sub DBGrid_DblClick
   my $range_s = $winDB->DBGrid->GetCellText($row, 0);
   my $range_e = $winDB->DBGrid->GetCellText($row, 1);
   
-  # If Network Whois Data exist, show it 
-  my $filename = "$range_s\-$range_e\.txt";
-  my $whoisDir = $winConfig->tfDbFile->Text();
-  my(@partsWhoisDBPath) = split(/\\/, $whoisDir);
-  if (pop(@partsWhoisDBPath) =~ /\./) { while ($whoisDir =~ /[^\\]$/) { chop($whoisDir); } }
-  my $networkWhoisDataFile = $whoisDir."cache\\$filename";
+  # If Network Whois Data exist, show it
+  my $networkWhoisDataFile = "$CONFIG{'WHOIS_DATA_CACHE'}\\$range_s\-$range_e\.txt";
   if (-T $networkWhoisDataFile) {
     open(FILE, $networkWhoisDataFile) or Win32::GUI::MessageBox($winDB, $STR{'errReadingNetworkData'}.$!, $STR{'error'}, 0x40010);
     my @networkWhoisData = <FILE>;
     close(FILE);
     my $data;
-    foreach my $line (@networkWhoisData) { $data .= "$line\r\n"; }
+    if (scalar(@networkWhoisData) < 2) { @networkWhoisData = split(/\r/, $networkWhoisData[0]); }
+    foreach my $line (@networkWhoisData) { $line =~ s/[\r\n]//g; $data .= "$line\r\n"; }
     $winNWD->tfNWD->Text($data);
     $winNWD->Center($winDB);
     $winNWD->DoModal();
@@ -4016,7 +4004,7 @@ sub deleteLine_Click
     my $dsn = "DBI:SQLite:dbname=$whoisDB";
     my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })
               or Win32::GUI::MessageBox($winDB, $STR{'errCreatingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
-              
+    
     # Loop each entry and delete
     my $j = 0;
     foreach my $ISP (@ISP2del) {
@@ -4026,9 +4014,12 @@ sub deleteLine_Click
         my $range_e = $winDB->DBGrid->GetCellText($i, 1);
         # Entry have been found
         if (($ISPRange_s eq $range_s) and ($ISPRange_e eq $range_e)) {
-          my $return = &deleteISP($whoisDB, \$dbh, $ISPRange_s, $ISPRange_e);
+          my $return = &deleteISP($whoisDB, \$dbh, $ISPRange_s, $ISPRange_e); # Delete in Database
           if ($return) {
-            &deleteISPGrid($i, $ISPRange_s, $ISPRange_e);
+            &deleteISPGrid($i, $ISPRange_s, $ISPRange_e); # Delete in Grid
+            # Delete the Network Whois Data File
+            my $networkWhoisDataFile = "$CONFIG{'WHOIS_DATA_CACHE'}\\$ISPRange_s\-$ISPRange_e\.txt";
+            if (-e $networkWhoisDataFile) { unlink($networkWhoisDataFile); }
           }
           last;
         }
@@ -4111,7 +4102,7 @@ sub btnWhois_Click
         
         # Thread 'die' signal handler
         $SIG{__DIE__} = sub {
-          my $errMsg = $_[0];
+          my $errMsg = (split(/ at /,$_[0]))[0];
           chomp($errMsg);
           $errMsg =~ s/[\t\r\n]/ /g;
           $win->ChangeCursor($ARROW);
@@ -4172,6 +4163,7 @@ sub btnWhois_Click
         foreach my $item (sort { $itemsIndex{$a} <=> $itemsIndex{$b} } keys(%itemsIndex)) {
           my $answer;
           my $return;
+          my $lineInGrid;
           
           $count++;
           $winPb->lblCount->Text("$count / $nbrItems");
@@ -4334,7 +4326,7 @@ sub btnWhois_Click
               else {
                 my $return = &addISP(\$dbh, \@fields);
                 if ($return) {
-                  &addISPGrid(\@fields);
+                  $lineInGrid = &addISPGrid(\@fields);
                   $nbrAdded++;
                 }
               }
@@ -4346,18 +4338,21 @@ sub btnWhois_Click
             foreach my $ip (keys %nwData) {
               my ($range_s, $range_e) = &checkRange_WhoisDB($ip, \$dbh);
               if ($range_s and $range_e) {
-                my $filename = "$range_s\-$range_e\.txt";
-                my $whoisDir = $whoisDB;
-                my(@partsWhoisDBPath) = split(/\\/, $whoisDir);
-                if (pop(@partsWhoisDBPath) =~ /\./) { while ($whoisDir =~ /[^\\]$/) { chop($whoisDir); } }
-                my $networkWhoisCacheDir = $whoisDir. 'cache';
-                if (!-d $networkWhoisCacheDir) { mkdir($networkWhoisCacheDir); }
-                my $networkWhoisDataFile = "$networkWhoisCacheDir\\$filename";
+                my $networkWhoisDataFile = "$CONFIG{'WHOIS_DATA_CACHE'}\\$range_s\-$range_e\.txt";
                 # Write Network whois data to file
                 open(HTML,">$networkWhoisDataFile") or Win32::GUI::MessageBox($win, $STR{'errWritingCache'}.$!, $STR{'error'}, 0x40010);
                 flock(HTML, 2);
-                foreach (@{$$refNWData{$ip}}) { print HTML $_; }
+                foreach (@{$$refNWData{$ip}}) {
+                  s/[\r\n]//g; # Remove any line break
+                  print HTML $_ . "\n";
+                }
                 close(HTML);
+                # Set background color to green in Grid
+                $winDB->DBGrid->SetCellBkColor($lineInGrid, 0, 0x33FF66);
+                $winDB->DBGrid->SetCellBkColor($lineInGrid, 1, 0x33FF66);
+                $winDB->DBGrid->SetCellBkColor($lineInGrid, 2, 0x33FF66);
+                $winDB->DBGrid->SetCellBkColor($lineInGrid, 3, 0x33FF66);
+                $winDB->DBGrid->SetCellBkColor($lineInGrid, 4, 0x33FF66);
               }
             }
           }
@@ -4997,7 +4992,7 @@ sub btnCancel_Click
     &winPb_Terminate;
     $THR->kill('KILL')->detach();
     $winPb->ChangeCursor($ARROW);
-  }
+  } elsif ($THR_UPDATE and $THR_UPDATE->is_running()) { $THR_UPDATE->kill('KILL')->detach(); }
   return(1);
 
 }  #--- End btnCancel_Click
@@ -5024,7 +5019,9 @@ sub winPb_Terminate
 sub selectAll_Click
 #--------------------------#
 {
-  if($LISTNO == 1) { gridSelectAll_Click; }
+  if   ($LISTNO == 1) { &gridSelectAll_Click;          } # Select All Whois DB Grid
+  elsif($LISTNO == 2) { &logDBGridSelectAll_Click;     } # Select All Logging DB Grid
+  elsif($LISTNO == 3) { $winClip->tfClip->SelectAll(); } # Select All Clipboard Textfield
   
 }  #--- End selectAll_Click
 
@@ -5135,9 +5132,257 @@ sub date
 }  #--- End date
 
 #--------------------------#
+sub updateAll
+#--------------------------#
+{
+  # Thread 'cancellation' signal handler
+  $SIG{'KILL'} = sub {
+    $win->ChangeCursor($ARROW);
+    # Turn off progress bar
+    $winPb->lblPbCurr->Text('');
+    $winPb->lblCount->Text('');
+    $winPb->pbWinPb->SetPos(0);
+    $winPb->Hide();
+    threads->exit();
+  };
+  
+  # Thread 'die' signal handler
+  $SIG{__DIE__} = sub {
+    my $errMsg = (split(/ at /,$_[0]))[0];
+    chomp($errMsg);
+    $errMsg =~ s/[\t\r\n]/ /g;
+    $win->ChangeCursor($ARROW);
+    # Turn off progress bar
+    $winPb->lblPbCurr->Text('');
+    $winPb->lblCount->Text('');
+    $winPb->pbWinPb->SetPos(0);
+    $winPb->Hide();
+    Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $errMsg", $STR{'error'}, 0x40010);
+  };
+  
+  # Update Tool ?
+  if ($CONFIG{'TOOL_AUTO_UPDATE'})    { &updateTool(0);   }
+  # Update TLDDB ?
+  if ($CONFIG{'TLD_DB_AUTO_UPDATE'} ) { &updateTLDDB(0);  }
+  # Update Whois Server DB ?
+  if ($CONFIG{'WS_DB_AUTO_UPDATE'}  ) { &updateWSDB(0);   }
+  # Update IPv4 DB ?
+  if ($CONFIG{'IPv4_DB_AUTO_UPDATE'}) { &updateIPv4DB(0); }
+  # Update IPv6 DB ?
+  if ($CONFIG{'IPv6_DB_AUTO_UPDATE'}) { &updateIPv6DB(0); }
+  
+}  #--- End updateAll
+
+#--------------------------#
+sub createCW
+#--------------------------#
+{
+  # Create Config Wizard Window
+  my $winCW  = Win32::GUI::DialogBox->new(-name        => 'winCW'                   ,
+                                          -parent      => $win                      , # May be open from many Window
+                                          -text        => $STR{'winCW'}             ,
+                                          -pos         => [$winPosX, $winPosY]      ,
+                                          -size        => [400, 205]                ,
+                                          -background  => [255, 255, 255]           ,
+                                          -hasmaximize => 0                         ,
+                                          -hasminimize => 1                         ,
+                                          -helpbutton  => 0                         ,
+                                          -resizable   => 0                         ,
+                                          -dialogui    => 1                         , );
+  $winCW->SetIcon($winICO);
+  
+  $winCW->AddLabel(     -name        => 'lblConfigLogo'       ,
+                        -size        => [128,128]             ,
+                        -pos         => [  0,  5]             ,
+                        -bitmap      => $config128Bmp         , );
+  $winCW->AddLabel(     -name        => 'lblSetGenOpt'        ,
+                        -size        => [220, 22]             ,
+                        -pos         => [140, 10]             ,
+                        -font        => $font10               ,
+                        -text        => $STR{'SetGenOpt'}.'...',
+                        -background  => [255, 255, 255]       ,
+                        -foreground  => [  0, 102, 204]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblSetGenOptDone'    ,
+                        -size        => [ 20, 20]             ,
+                        -pos         => [365, 10]             ,
+                        -bitmap      => $checkBmp             ,
+                        -background  => [255, 255, 255]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblReportFolder'     ,
+                        -size        => [220, 22]             ,
+                        -pos         => [140, 30]             ,
+                        -font        => $font10               ,
+                        -text        => $STR{'createReportFolder'}.'...',
+                        -background  => [255, 255, 255]       ,
+                        -foreground  => [  0, 102, 204]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblReportFolderDone' ,
+                        -size        => [ 20, 20]             ,
+                        -pos         => [365, 30]             ,
+                        -bitmap      => $checkBmp             ,
+                        -background  => [255, 255, 255]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblLoggingDB'        ,
+                        -size        => [220, 22]             ,
+                        -pos         => [140, 50]             ,
+                        -font        => $font10               ,
+                        -text        => $STR{'btnLogDbFileNewTip'}.'...',
+                        -background  => [255, 255, 255]       ,
+                        -foreground  => [  0, 102, 204]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblLoggingDBDone'    ,
+                        -size        => [ 20, 20]             ,
+                        -pos         => [365, 50]             ,
+                        -bitmap      => $checkBmp             ,
+                        -background  => [255, 255, 255]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblLoggingDBError'   ,
+                        -size        => [ 20, 20]             ,
+                        -pos         => [365, 50]             ,
+                        -bitmap      => $errorBmp             ,
+                        -background  => [255, 255, 255]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblWhoisDB'          ,
+                        -size        => [220, 22]             ,
+                        -pos         => [140, 70]             ,
+                        -font        => $font10               ,
+                        -text        => $STR{'btnDbFileNewTip'}.'...',
+                        -background  => [255, 255, 255]       ,
+                        -foreground  => [  0, 102, 204]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblWhoisDBDone'      ,
+                        -size        => [ 20, 20]             ,
+                        -pos         => [365, 70]             ,
+                        -bitmap      => $checkBmp             ,
+                        -background  => [255, 255, 255]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblWhoisDBError'     ,
+                        -size        => [ 20, 20]             ,
+                        -pos         => [365, 70]             ,
+                        -bitmap      => $errorBmp             ,
+                        -background  => [255, 255, 255]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblDLTLDDB'          ,
+                        -size        => [220, 22]             ,
+                        -pos         => [140, 90]             ,
+                        -font        => $font10               ,
+                        -text        => $STR{'downloadTLDDB'}.'...',
+                        -background  => [255, 255, 255]       ,
+                        -foreground  => [  0, 102, 204]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblDLTLDDBDone'      ,
+                        -size        => [ 20, 20]             ,
+                        -pos         => [365, 90]             ,
+                        -bitmap      => $checkBmp             ,
+                        -background  => [255, 255, 255]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblDLTLDDBError'     ,
+                        -size        => [ 20, 20]             ,
+                        -pos         => [365, 90]             ,
+                        -bitmap      => $errorBmp             ,
+                        -background  => [255, 255, 255]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblDLWSDB'           ,
+                        -size        => [220, 22]             ,
+                        -pos         => [140,110]             ,
+                        -font        => $font10               ,
+                        -text        => $STR{'downloadWSDB'}.'...',
+                        -background  => [255, 255, 255]       ,
+                        -foreground  => [  0, 102, 204]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblDLWSDBDone'       ,
+                        -size        => [ 20, 20]             ,
+                        -pos         => [365,110]             ,
+                        -bitmap      => $checkBmp             ,
+                        -background  => [255, 255, 255]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblDLWSDBError'      ,
+                        -size        => [ 20, 20]             ,
+                        -pos         => [365,110]             ,
+                        -bitmap      => $errorBmp             ,
+                        -background  => [255, 255, 255]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblDLIPv4DB'         ,
+                        -size        => [220, 22]             ,
+                        -pos         => [140,130]             ,
+                        -font        => $font10               ,
+                        -text        => $STR{'downloadIPv4DB'}.'...',
+                        -background  => [255, 255, 255]       ,
+                        -foreground  => [  0, 102, 204]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblDLIPv4DBDone'     ,
+                        -size        => [ 20, 20]             ,
+                        -pos         => [365,130]             ,
+                        -bitmap      => $checkBmp             ,
+                        -background  => [255, 255, 255]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblDLIPv4DBError'    ,
+                        -size        => [ 20, 20]             ,
+                        -pos         => [365,130]             ,
+                        -bitmap      => $errorBmp             ,
+                        -background  => [255, 255, 255]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblDLIPv6DB'         ,
+                        -size        => [220, 22]             ,
+                        -pos         => [140,150]             ,
+                        -font        => $font10               ,
+                        -text        => $STR{'downloadIPv6DB'}.'...',
+                        -background  => [255, 255, 255]       ,
+                        -foreground  => [  0, 102, 204]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblDLIPv6DBDone'     ,
+                        -size        => [ 20, 20]             ,
+                        -pos         => [365,150]             ,
+                        -bitmap      => $checkBmp             ,
+                        -background  => [255, 255, 255]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblDLIPv6DBError'    ,
+                        -size        => [ 20, 20]             ,
+                        -pos         => [365,150]             ,
+                        -bitmap      => $errorBmp             ,
+                        -background  => [255, 255, 255]       ,
+                        -visible     => 0                     , );
+  
+  return(\$winCW);
+
+}  #--- End createCW
+
+#--------------------------#
 sub firstStart
 #--------------------------#
 {
+  # Local variables
+  my $refWinCW = shift;
+  
+  # Thread 'cancellation' signal handler
+  $SIG{'KILL'} = sub {
+    $win->ChangeCursor($ARROW);
+    # Turn off progress bar
+    $winPb->lblPbCurr->Text('');
+    $winPb->lblCount->Text('');
+    $winPb->pbWinPb->SetPos(0);
+    $winPb->Hide();
+    $$refWinCW->Hide();
+    Win32::GUI::MessageBox($win, $STR{'configSetPart'}, "XL-Whois $VERSION", 0x40040);
+    threads->exit();
+  };
+  
+  # Thread 'die' signal handler
+  $SIG{__DIE__} = sub {
+    my $errMsg = (split(/ at /,$_[0]))[0];
+    chomp($errMsg);
+    $errMsg =~ s/[\t\r\n]/ /g;
+    $win->ChangeCursor($ARROW);
+    # Turn off progress bar
+    $winPb->lblPbCurr->Text('');
+    $winPb->lblCount->Text('');
+    $winPb->pbWinPb->SetPos(0);
+    $winPb->Hide();
+    $$refWinCW->Hide();
+    Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $errMsg", $STR{'error'}, 0x40010);
+  };
+  
   # Yes (6), No (7)
   my $answer = Win32::GUI::MessageBox($win, $STR{'firstUse'}, $STR{'config'}, 0x1024);
   
@@ -5150,27 +5395,22 @@ sub firstStart
     # Answer is no, open popup to let user choose a different location
     if ($answer == 7) {
       # Select a folder
-      $dir = $win->BrowseForFolder( -owner      => $win                     ,
-                                    -title      => $STR{'selectFolder'}.':' ,
-                                    -folderonly => 1                        ,
-                                    -newui      => 1                        ,
-                                    -directory  => $PROGDIR                 , );
+      $dir = Win32::GUI::BrowseForFolder( -owner      => $$refWinCW               ,
+                                          -title      => $STR{'selectFolder'}.':' ,
+                                          -folderonly => 1                        ,
+                                          -newui      => 1                        ,
+                                          -directory  => $PROGDIR                 , );
     # Answer is yes, use default dir
     } else { $dir = $PROGDIR; }
     
     # Selected folder
     if ($dir and -d $dir) {
-      # Turn on progress bar
-      $win->ChangeCursor($HOURGLASS);
-      $winPb->lblPbCurr->Text('');
-      $winPb->lblCount->Text('');
-      $winPb->pbWinPb->SetPos(0);
-      $winPb->btnCancel->Disable();
-      $winPb->Center();
-      $winPb->Show();
+      $$refWinCW->Top($win->Top()+5);
+      $$refWinCW->Left($win->Left()+310);
+      $$refWinCW->Show();
       
       # Configuring General Options
-      $winPb->lblPbCurr->Text($STR{'firstStart1'}.'...');
+      $$refWinCW->lblSetGenOpt->Show();
       # Tool
       $winConfig->chAutoUpdate->Checked(1);      
       $CONFIG{'TOOL_AUTO_UPDATE'} = 1;
@@ -5188,11 +5428,11 @@ sub firstStart
       $CONFIG{'OPT_IPv6'}        = 1;
       $CONFIG{'OPT_HOSTNAME'}    = 1;
       $CONFIG{'OPT_DOMAIN_NAME'} = 1;
+      $$refWinCW->lblSetGenOptDone->Show();
 
       # Configuring Storage
       # Folder for Report
-      $winPb->lblPbCurr->Text($STR{'createReportFolder'}.'...');
-      sleep(1);
+      $$refWinCW->lblReportFolder->Show();
       my $reportDir = "$dir\\whois";
       if (!-d $reportDir) { mkdir($reportDir); }
       $winConfig->tfReportDir->Text($reportDir);
@@ -5205,9 +5445,11 @@ sub firstStart
       $CONFIG{'REPORT_REPLACE'} = 0;
       $winConfig->chAutoViewDir->Checked(0); # Auto view dir not checked
       $CONFIG{'AUTO_VIEW_DIR'}  = 0;
+      &saveConfig(\%CONFIG);
+      $$refWinCW->lblReportFolderDone->Show();
+      
       # Create Logging Database
-      $winPb->lblPbCurr->Text($STR{'btnLogDbFileNewTip'}.'...');
-      sleep(1);
+      $$refWinCW->lblLoggingDB->Show();
       my $logDbFile = "$dir\\Logging.db";
       my $return = &createLoggingDB($logDbFile);
       # Success
@@ -5220,64 +5462,91 @@ sub firstStart
         $win->tfComment->Enable();        # Enable Add Comment
         $win->chCheckLogging->Checked(1); # Set Check Logging Database
         $CONFIG{'CHECK_LOGGING_DB'} = 1;
+        $$refWinCW->lblLoggingDBDone->Show();
       # Error
-      } else {    
-        Win32::GUI::MessageBox($winPb, $STR{'errCreatingLoggingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
+      } else {
+        $$refWinCW->lblLoggingDBError->Show();
+        Win32::GUI::MessageBox($$refWinCW, $STR{'errCreatingLoggingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
       }
+      &saveConfig(\%CONFIG);
+      
       # Create Whois Database
       $return = 0;
-      $winPb->lblPbCurr->Text($STR{'btnDbFileNewTip'}.'...');
-      sleep(1);
+      $$refWinCW->lblWhoisDB->Show();
       my $dbFile = "$dir\\Whois.db";
       $return = &createWhoisDB($dbFile);
       # Success
       if ($return) {
         $winConfig->tfDbFile->Text($dbFile);
         $CONFIG{'WHOIS_DB_FILE'} = $dbFile;
-        $winConfig->chDBCache->Checked(1); # Set Store Network whois data
+        $winConfig->chDBCache->Checked(1);  # Set Store Network whois data
         $CONFIG{'WHOIS_CACHE'} = 1;
         $win->cbCheckWhoisDB->SetCurSel(1); # Default is "If present, ask"
         $CONFIG{'CHECK_WHOIS_DB'} = 1;
+        $$refWinCW->lblWhoisDBDone->Show();
       # Error
-      } else {    
-        Win32::GUI::MessageBox($winPb, $STR{'errCreatingWhoisDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
+      } else {
+        $$refWinCW->lblWhoisDBDone->Show();
+        Win32::GUI::MessageBox($$refWinCW, $STR{'errCreatingWhoisDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
       }
+      &saveConfig(\%CONFIG);
       
       # Configuring Databases
       # Download TLD Database
-      $winPb->lblPbCurr->Text($STR{'downloadTLDDB'}.'...');
-      $return = &downloadTLDDB(1, "$dir\\effective_tld_names.dat");
-      if ($return) { $winPb->lblPbCurr->Text($return.'...'); sleep(1); } # Error
+      $$refWinCW->lblDLTLDDB->Show();
+      $return = &downloadTLDDB(0, "$dir\\effective_tld_names.dat");
+      if ($return) { # Error
+        $$refWinCW->lblDLTLDDBError->Show();
+        Win32::GUI::MessageBox($$refWinCW, "$STR{'errorMsg'}: $return", $STR{'error'}, 0x40010);
+      } else { # Success
+        $$refWinCW->lblDLTLDDBDone->Show();
+      }
       $winConfig->chTLDDBAutoUpt->Checked(1); # Set auto update for TLD Database
       $CONFIG{'TLD_DB_AUTO_UPDATE'} = 1;
+      &saveConfig(\%CONFIG);
+      
       # Download Whois Server Database
-      $winPb->lblPbCurr->Text($STR{'downloadWSDB'}.'...');
-      $return = &downloadWSDB(1, "$dir\\tld.json");
-      if ($return) { $winPb->lblPbCurr->Text($return.'...'); sleep(1); } # Error
+      $$refWinCW->lblDLWSDB->Show();
+      $return = &downloadWSDB(0, "$dir\\tld.json");
+      if ($return) { # Error
+        $$refWinCW->lblDLWSDBError->Show();
+        Win32::GUI::MessageBox($$refWinCW, "$STR{'errDownloadWSDB'}: $return", $STR{'error'}, 0x40010);
+      } else { # Success
+        $$refWinCW->lblDLWSDBDone->Show();
+      }
       $winConfig->chWSDBAutoUpt->Checked(1); # Set auto update for Whois Server Database
       $CONFIG{'WS_DB_AUTO_UPDATE'} = 1;
+      &saveConfig(\%CONFIG);
+      
       # Download IPv4 Database
-      $winPb->lblPbCurr->Text($STR{'downloadIPv4DB'}.'...');
-      $return = &downloadIPv4DB(1, "$dir\\ipv4-address-space.csv");
-      if ($return) { $winPb->lblPbCurr->Text($return.'...'); sleep(1); } # Error
+      $$refWinCW->lblDLIPv4DB->Show();
+      $return = &downloadIPv4DB(0, "$dir\\ipv4-address-space.csv");
+      if ($return) { # Error
+        $$refWinCW->lblDLIPv4DBError->Show();
+        Win32::GUI::MessageBox($$refWinCW, "$STR{'errDownloadIPv4DB'}: $return", $STR{'error'}, 0x40010);
+      } else { # Success
+        $$refWinCW->lblDLIPv4DBDone->Show();
+      }
       $winConfig->chIPv4DBAutoUpt->Checked(1); # Set auto update for IPv4 Database
       $CONFIG{'IPv4_DB_AUTO_UPDATE'} = 1;
+      &saveConfig(\%CONFIG);
+      
       # Download IPv6 Database
-      $winPb->lblPbCurr->Text($STR{'downloadIPv6DB'}.'...');
-      $return = &downloadIPv6DB(1, "$dir\\ipv6-unicast-address-assignments.csv");
-      if ($return) { $winPb->lblPbCurr->Text($return.'...'); sleep(1); } # Error
+      $$refWinCW->lblDLIPv6DB->Show();
+      $return = &downloadIPv6DB(0, "$dir\\ipv6-unicast-address-assignments.csv");
+      if ($return) { # Error
+        $$refWinCW->lblDLIPv6DBError->Show();
+        Win32::GUI::MessageBox($$refWinCW, "$STR{'errDownloadIPv6DB'}: $return", $STR{'error'}, 0x40010);
+      } else { # Success
+        $$refWinCW->lblDLIPv6DBDone->Show();
+      }
       $winConfig->chIPv6DBAutoUpt->Checked(1); # Set auto update for IPv6 Database
       $CONFIG{'IPv6_DB_AUTO_UPDATE'} = 1;
-      
-      # Turn off progress bar
-      $winPb->lblPbCurr->Text('');
-      $winPb->lblCount->Text('');
-      $winPb->pbWinPb->SetPos(0);
-      $winPb->btnCancel->Enable();
-      &winPb_Terminate;
-  
       &saveConfig(\%CONFIG);
+  
       &isWhoisReady(0);
+      sleep(1);
+      $$refWinCW->Hide(); # Close Configuration Wizard
       $win->ChangeCursor($ARROW);
       
       # Send a test ? (program directory)
@@ -5559,7 +5828,11 @@ sub updateTool
     }
   }
   # Error 
-  else { Win32::GUI::MessageBox($winConfig, $STR{'errConnection'}.': '.$res->status_line, $STR{'error'},0x40010); }
+  else {
+    if ($confirm) {
+      Win32::GUI::MessageBox($winConfig, $STR{'errConnection'}.': '.$res->status_line, $STR{'error'},0x40010);
+    }
+  }
 
 }  #--- End updateTool
 
@@ -5778,12 +6051,12 @@ sub btnReportDir_Click
     if (pop(@parts) =~ /\./) {
       while ($lastDir =~ /[^\\]$/) { chop($lastDir); }
     }
-    $dir = $winConfig->BrowseForFolder( -owner      => $winConfig             ,
+    $dir = Win32::GUI::BrowseForFolder( -owner      => $winConfig             ,
                                         -title      => $STR{'btnReportDirTip'},
                                         -folderonly => 1                      ,
                                         -directory  => $lastDir               ,);
   } else {
-    $dir = $winConfig->BrowseForFolder( -owner      => $winConfig             ,
+    $dir = Win32::GUI::BrowseForFolder( -owner      => $winConfig             ,
                                         -title      => $STR{'btnReportDirTip'},
                                         -folderonly => 1                      , );
   }
@@ -6044,6 +6317,16 @@ sub tfDbFile_Change
 {
   # Local variables
   my $dbFile = $winConfig->tfDbFile->Text();
+  my $networkWhoisCacheDir;
+  
+  # Set Network Whois Data cache folder
+  if ($dbFile) {
+    my $whoisDir = $dbFile; # Same folder of Whois Database
+    my(@partsWhoisDBPath) = split(/\\/, $whoisDir);
+    if (pop(@partsWhoisDBPath) =~ /\./) { while ($whoisDir =~ /[^\\]$/) { chop($whoisDir); } }
+    $networkWhoisCacheDir = $whoisDir. 'cache';
+    $CONFIG{'WHOIS_DATA_CACHE'} = $networkWhoisCacheDir;
+  }
   
   # Remember
   if ($dbFile and -f $dbFile) {
@@ -6051,9 +6334,11 @@ sub tfDbFile_Change
     threads->create(sub {
       if(&loadWhoisDB) {
         $CONFIG{'WHOIS_DB_FILE'} = $dbFile;
+        if (!-d $networkWhoisCacheDir) { mkdir($networkWhoisCacheDir); }
         &saveConfig(\%CONFIG);
       } else { # Invalid database
         delete($CONFIG{'WHOIS_DB_FILE'});
+        delete($CONFIG{'WHOIS_DATA_CACHE'});
         $win->cbCheckWhoisDB->SetCurSel(0);
         $CONFIG{'CHECK_WHOIS_DB'} = 0;
         $winConfig->chDBCache->Checked(0);
@@ -6066,6 +6351,7 @@ sub tfDbFile_Change
     });
   } else { # Invalid file or no file
     delete($CONFIG{'WHOIS_DB_FILE'});
+    delete($CONFIG{'WHOIS_DATA_CACHE'});
     $win->cbCheckWhoisDB->SetCurSel(0);
     $CONFIG{'CHECK_WHOIS_DB'} = 0;
     $winConfig->chDBCache->Checked(0);
@@ -6685,7 +6971,7 @@ sub updateTLDDB
     if ($answer == 7) { return(0); }
     
     # Answer is Yes, download the update
-    else { &downloadTLDDB(0, $winConfig->tfTLDDB->Text()); }
+    else { &downloadTLDDB(1, $winConfig->tfTLDDB->Text()); }
     
   # TLDDB is up to date, show message if $confirm == 1
   } elsif ($upToDate == 1) {
@@ -6752,9 +7038,8 @@ sub downloadTLDDB
 #--------------------------#
 {
   # Local variables
-  my $winPbStatus   = shift; # Indicate if winPb is already displayed
-  # $winPbStatus = 1 if function called in Configuration Wizard, don't show status and return error instead of displaying it
-  my $localTLDDB    = shift; # Local filepath
+  my $confirm    = shift; # If $confirm == 1, show status in a popup, else return status
+  my $localTLDDB = shift; # Local filepath
   if (!$localTLDDB) { $localTLDDB = "$PROGDIR\\effective_tld_names.dat"; } # Default location
 
   # Start an agent
@@ -6769,10 +7054,8 @@ sub downloadTLDDB
   $winPb->pbWinPb->SetRange(0, 100);
   $winPb->pbWinPb->SetPos(0);
   $winPb->pbWinPb->SetStep(1);
-  if (!$winPbStatus) {
-    $winPb->Center($win);
-    $winPb->Show();
-  }
+  $winPb->Center($win);
+  $winPb->Show();
   
   # Check size of the remote file
   if (!$TOTAL_SIZE) {
@@ -6781,13 +7064,13 @@ sub downloadTLDDB
     my $return = $res->status_line;
     if ($res->code == 200) { $TOTAL_SIZE = $res->header('content_length'); }
     else {
-      if (!$winPbStatus) {
-        # Turn off progress bar
-        $win->ChangeCursor($ARROW);
-        $winPb->lblPbCurr->Text('');
-        $winPb->lblCount->Text('');
-        $winPb->pbWinPb->SetPos(0);
-        &winPb_Terminate;
+      # Turn off progress bar
+      $win->ChangeCursor($ARROW);
+      $winPb->lblPbCurr->Text('');
+      $winPb->lblCount->Text('');
+      $winPb->pbWinPb->SetPos(0);
+      &winPb_Terminate;
+      if ($confirm) {
         Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errConnection'}...", $STR{'error'}, 0x40010);
       } else { return($STR{'errConnection'}); }
     }
@@ -6822,41 +7105,38 @@ sub downloadTLDDB
     
     # Finished
     if (-T $localTLDDB) {
-      if (!$winPbStatus) {
-        # Turn off progress bar
-        $win->ChangeCursor($ARROW);
-        $winPb->lblPbCurr->Text('');
-        $winPb->lblCount->Text('');
-        $winPb->pbWinPb->SetPos(0);
-        &winPb_Terminate;
-        # Update Config
-        $winConfig->tfTLDDB->Text($localTLDDB);
-        $CONFIG{'TLD_DB_FILE'} = $localTLDDB;
-        &saveConfig(\%CONFIG);
-        Win32::GUI::MessageBox($winConfig, $STR{'updatedTLDDB'}, $STR{'updateTLDDB'}, 0x40040);
-      } else {
-        $winConfig->tfTLDDB->Text($localTLDDB);
-        $CONFIG{'TLD_DB_FILE'} = $localTLDDB;
-      }
-    } else {
-      if (!$winPbStatus) {
-        # Turn off progress bar
-        $win->ChangeCursor($ARROW);
-        $winPb->lblPbCurr->Text('');
-        $winPb->lblCount->Text('');
-        $winPb->pbWinPb->SetPos(0);
-        &winPb_Terminate;
-        Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadTLDDB'}...", $STR{'error'}, 0x40010);
-      } else { return($STR{'errDownloadTLDDB'}); }
-    }
-  } else {
-    if (!$winPbStatus) {
       # Turn off progress bar
       $win->ChangeCursor($ARROW);
       $winPb->lblPbCurr->Text('');
       $winPb->lblCount->Text('');
       $winPb->pbWinPb->SetPos(0);
       &winPb_Terminate;
+      # Update Config
+      $winConfig->tfTLDDB->Text($localTLDDB);
+      $CONFIG{'TLD_DB_FILE'} = $localTLDDB;
+      if ($confirm) {
+        &saveConfig(\%CONFIG);
+        Win32::GUI::MessageBox($winConfig, $STR{'updatedTLDDB'}, $STR{'updateTLDDB'}, 0x40040);
+      }
+    } else {
+      # Turn off progress bar
+      $win->ChangeCursor($ARROW);
+      $winPb->lblPbCurr->Text('');
+      $winPb->lblCount->Text('');
+      $winPb->pbWinPb->SetPos(0);
+      &winPb_Terminate;
+      if ($confirm) {
+        Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadTLDDB'}...", $STR{'error'}, 0x40010);
+      } else { return($STR{'errDownloadTLDDB'}); }
+    }
+  } else {
+    # Turn off progress bar
+    $win->ChangeCursor($ARROW);
+    $winPb->lblPbCurr->Text('');
+    $winPb->lblCount->Text('');
+    $winPb->pbWinPb->SetPos(0);
+    &winPb_Terminate;
+    if ($confirm) {
       Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadTLDDB'}...", $STR{'error'}, 0x40010);
     } else { return($STR{'errDownloadTLDDB'}); }
   }
@@ -6895,7 +7175,7 @@ sub updateWSDB
     if ($answer == 7) { return(0); }
     
     # Answer is Yes, download the update
-    else { &downloadWSDB(0, $winConfig->tfWSDB->Text()); }
+    else { &downloadWSDB(1, $winConfig->tfWSDB->Text()); }
     
   # WSDB is up to date, show message if $confirm == 1
   } elsif ($upToDate == 1) {
@@ -6962,10 +7242,9 @@ sub downloadWSDB
 #--------------------------#
 {
   # Local variables
-  my $winPbStatus   = shift; # Indicate if winPb is already displayed
-  # $winPbStatus = 1 if function called in Configuration Wizard, don't show status and return error instead of displaying it
-  my $localWSDB     = shift; # Local filepath
-  if (!$localWSDB)  { $localWSDB = "$PROGDIR\\tld.json"; } # Default location
+  my $confirm      = shift; # If $confirm == 1, show status in a popup, else return status
+  my $localWSDB    = shift; # Local filepath
+  if (!$localWSDB) { $localWSDB = "$PROGDIR\\tld.json"; } # Default location
   
   # Start an agent
   my $ua = new LWP::UserAgent;
@@ -6979,10 +7258,8 @@ sub downloadWSDB
   $winPb->pbWinPb->SetRange(0, 100);
   $winPb->pbWinPb->SetPos(0);
   $winPb->pbWinPb->SetStep(1);
-  if (!$winPbStatus) {
-    $winPb->Center($win);
-    $winPb->Show();
-  }
+  $winPb->Center($win);
+  $winPb->Show();
   
   # Check size of the remote file
   if (!$TOTAL_SIZE) {
@@ -6991,13 +7268,13 @@ sub downloadWSDB
     my $return = $res->status_line;
     if ($res->code == 200) { $TOTAL_SIZE = $res->header('content_length'); }
     else {
-      if (!$winPbStatus) {
-        # Turn off progress bar
-        $win->ChangeCursor($ARROW);
-        $winPb->lblPbCurr->Text('');
-        $winPb->lblCount->Text('');
-        $winPb->pbWinPb->SetPos(0);
-        &winPb_Terminate;
+      # Turn off progress bar
+      $win->ChangeCursor($ARROW);
+      $winPb->lblPbCurr->Text('');
+      $winPb->lblCount->Text('');
+      $winPb->pbWinPb->SetPos(0);
+      &winPb_Terminate;
+      if ($confirm) {
         Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errConnection'}...", $STR{'error'}, 0x40010);
       } else { return($STR{'errConnection'}); }
     }
@@ -7032,43 +7309,39 @@ sub downloadWSDB
     
     # Finished
     if (-T $localWSDB) {
-      if (!$winPbStatus) {
-        # Turn off progress bar
-        $win->ChangeCursor($ARROW);
-        $winPb->lblPbCurr->Text('');
-        $winPb->lblCount->Text('');
-        $winPb->pbWinPb->SetPos(0);
-        if (!$winPbStatus) { &winPb_Terminate; }
-        # Update Config
-        $winConfig->tfWSDB->Text($localWSDB);
-        $CONFIG{'WS_DB_FILE'} = $localWSDB;
-        &saveConfig(\%CONFIG);
-        # Show final message
-        Win32::GUI::MessageBox($winConfig, $STR{'updatedWSDB'}, $STR{'updateWSDB'}, 0x40040);
-      } else {
-        $winConfig->tfWSDB->Text($localWSDB);
-        $CONFIG{'WS_DB_FILE'} = $localWSDB;
-      }
-    } else {
-      if (!$winPbStatus) {
-        # Turn off progress bar
-        $win->ChangeCursor($ARROW);
-        $winPb->lblPbCurr->Text('');
-        $winPb->lblCount->Text('');
-        $winPb->pbWinPb->SetPos(0);
-        &winPb_Terminate;
-        Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadWSDB'}...", $STR{'error'}, 0x40010);
-      } else { return($STR{'errDownloadWSDB'}); }
-    }
-
-  } else {
-    if (!$winPbStatus) {
       # Turn off progress bar
       $win->ChangeCursor($ARROW);
       $winPb->lblPbCurr->Text('');
       $winPb->lblCount->Text('');
       $winPb->pbWinPb->SetPos(0);
       &winPb_Terminate;
+      # Update Config
+      $winConfig->tfWSDB->Text($localWSDB);
+      $CONFIG{'WS_DB_FILE'} = $localWSDB;
+      if ($confirm) {
+        &saveConfig(\%CONFIG);
+        Win32::GUI::MessageBox($winConfig, $STR{'updatedWSDB'}, $STR{'updateWSDB'}, 0x40040);
+      }
+    } else {
+      # Turn off progress bar
+      $win->ChangeCursor($ARROW);
+      $winPb->lblPbCurr->Text('');
+      $winPb->lblCount->Text('');
+      $winPb->pbWinPb->SetPos(0);
+      &winPb_Terminate;
+      if ($confirm) {
+        Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadWSDB'}...", $STR{'error'}, 0x40010);
+      } else { return($STR{'errDownloadWSDB'}); }
+    }
+
+  } else {
+    # Turn off progress bar
+    $win->ChangeCursor($ARROW);
+    $winPb->lblPbCurr->Text('');
+    $winPb->lblCount->Text('');
+    $winPb->pbWinPb->SetPos(0);
+    &winPb_Terminate;
+    if ($confirm) {
       Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadWSDB'}...", $STR{'error'}, 0x40010);
     } else { return($STR{'errDownloadWSDB'}); }
   }
@@ -7107,7 +7380,7 @@ sub updateIPv4DB
     if ($answer == 7) { return(0); }
     
     # Answer is Yes, download the update
-    else { &downloadIPv4DB(0, $winConfig->tfIPv4DB->Text()); }
+    else { &downloadIPv4DB(1, $winConfig->tfIPv4DB->Text()); }
     
   # IPv4DB is up to date, show message if $confirm == 1
   } elsif ($upToDate == 1) {
@@ -7173,8 +7446,7 @@ sub downloadIPv4DB
 #--------------------------#
 {
   # Local variables
-  my $winPbStatus   = shift; # Indicate if winPb is already displayed
-  # $winPbStatus = 1 if function called in Configuration Wizard, don't show status and return error instead of displaying it
+  my $confirm        = shift; # If $confirm == 1, show status in a popup, else return status
   my $localIPv4DB    = shift; # Local filepath
   if (!$localIPv4DB) { $localIPv4DB = "$PROGDIR\\ipv4-address-space.csv"; } # Default location
   
@@ -7183,14 +7455,14 @@ sub downloadIPv4DB
   if (is_success(getstore($IPv4DB_CSV, $localIPv4DB))) {
     $winConfig->tfIPv4DB->Text($localIPv4DB);
     $CONFIG{'IPv4_DB_FILE'} = $localIPv4DB;
-    if (!$winPbStatus) {
+    if ($confirm) {
       &saveConfig(\%CONFIG);
       $win->ChangeCursor($ARROW);
       Win32::GUI::MessageBox($winConfig, $STR{'updatedIPv4DB'}, $STR{'updateIPv4DB'}, 0x40040);
     }
   # Error
   } else {
-    if (!$winPbStatus) {
+    if ($confirm) {
       $win->ChangeCursor($ARROW);
       Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadIPv4DB'}...", $STR{'error'}, 0x40010);
     } else { return($STR{'errDownloadIPv4DB'}); }
@@ -7228,7 +7500,7 @@ sub updateIPv6DB
     if ($answer == 7) { return(0); }
     
     # Answer is Yes, download the update
-    else { &downloadIPv6DB(0, $winConfig->tfIPv6DB->Text()); }
+    else { &downloadIPv6DB(1, $winConfig->tfIPv6DB->Text()); }
     
   # IPv6DB is up to date, show message if $confirm == 1
   } elsif ($upToDate == 1) {
@@ -7294,8 +7566,7 @@ sub downloadIPv6DB
 #--------------------------#
 {
   # Local variables
-  my $winPbStatus   = shift; # Indicate if winPb is already displayed
-  # $winPbStatus = 1 if function called in Configuration Wizard, don't show status and return error instead of displaying it
+  my $confirm        = shift; # If $confirm == 1, show status in a popup, else return status
   my $localIPv6DB    = shift; # Local filepath
   if (!$localIPv6DB) { $localIPv6DB = "$PROGDIR\\ipv6-unicast-address-assignments.csv"; } # Default location
   
@@ -7304,14 +7575,14 @@ sub downloadIPv6DB
   if (is_success(getstore($IPv6DB_CSV, $localIPv6DB))) {
     $winConfig->tfIPv6DB->Text($localIPv6DB);
     $CONFIG{'IPv6_DB_FILE'} = $localIPv6DB;
-    if (!$winPbStatus) {
+    if ($confirm) {
       &saveConfig(\%CONFIG);
       $win->ChangeCursor($ARROW);
       Win32::GUI::MessageBox($winConfig, $STR{'updatedIPv6DB'}, $STR{'updateIPv6DB'}, 0x40040);
     }
   # Error
   } else {
-    if (!$winPbStatus) {
+    if ($confirm) {
       $win->ChangeCursor($ARROW);
       Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadIPv6DB'}...", $STR{'error'}, 0x40010);
     } else { return($STR{'errDownloadIPv6DB'}); }
@@ -7353,72 +7624,80 @@ sub loadConfig
   }
   
   # Options
-  if (exists($$refConfig{'OPT_DOMAIN'}))          { $win->chDomain->Checked($$refConfig{'OPT_DOMAIN'});                 }
-  else                                            { $win->chDomain->Checked(1);                                         } # Default checked
-  if (exists($$refConfig{'OPT_NETWORK'}))         { $win->chNetwork->Checked($$refConfig{'OPT_NETWORK'});               }
-  else                                            { $win->chNetwork->Checked(1);                                        } # Default checked
-  if (exists($$refConfig{'OPT_DNS'}))             { $win->chDNS->Checked($$refConfig{'OPT_DNS'});                       }
-  else                                            { $win->chDNS->Checked(0);                                            } # Default is not checked
+  if (exists($$refConfig{'OPT_DOMAIN'}))          { $win->chDomain->Checked($$refConfig{'OPT_DOMAIN'});                       }
+  else                                            { $win->chDomain->Checked(1);                                               } # Default checked
+  if (exists($$refConfig{'OPT_NETWORK'}))         { $win->chNetwork->Checked($$refConfig{'OPT_NETWORK'});                     }
+  else                                            { $win->chNetwork->Checked(1);                                              } # Default checked
+  if (exists($$refConfig{'OPT_DNS'}))             { $win->chDNS->Checked($$refConfig{'OPT_DNS'});                             }
+  else                                            { $win->chDNS->Checked(0);                                                  } # Default is not checked
   
   # General tab
-  if (exists($$refConfig{'TOOL_AUTO_UPDATE'}))    { $winConfig->chAutoUpdate->Checked($$refConfig{'TOOL_AUTO_UPDATE'});     }
-  else                                            { $winConfig->chAutoUpdate->Checked(1);                                   } # Default checked
-  if (exists($$refConfig{'START_MINIMIZED'}))     { $winConfig->chStartMinimized->Checked($$refConfig{'START_MINIMIZED'});  }
-  else                                            { $winConfig->chStartMinimized->Checked(0);                               } # Default is not checked
-  if (exists($$refConfig{'NSLOOKUP_TIMEOUT'}))    { $winConfig->tfLookupTO->Text($$refConfig{'NSLOOKUP_TIMEOUT'});          }
-  else                                            { $winConfig->tfLookupTO->Text(10); $$refConfig{'NSLOOKUP_TIMEOUT'} = 10; } # Default is 10 seconds
-  if (exists($$refConfig{'USERAGENT'}))           { $winConfig->tfUserAgent->Text($$refConfig{'USERAGENT'});                }
+  if (exists($$refConfig{'TOOL_AUTO_UPDATE'}))    { $winConfig->chAutoUpdate->Checked($$refConfig{'TOOL_AUTO_UPDATE'});       }
+  else                                            { $winConfig->chAutoUpdate->Checked(1);                                     } # Default checked
+  if (exists($$refConfig{'START_MINIMIZED'}))     { $winConfig->chStartMinimized->Checked($$refConfig{'START_MINIMIZED'});    }
+  else                                            { $winConfig->chStartMinimized->Checked(0);                                 } # Default is not checked
+  if (exists($$refConfig{'NSLOOKUP_TIMEOUT'}))    { $winConfig->tfLookupTO->Text($$refConfig{'NSLOOKUP_TIMEOUT'});            }
+  else                                            { $winConfig->tfLookupTO->Text(10); $$refConfig{'NSLOOKUP_TIMEOUT'} = 10;   } # Default is 10 seconds
+  if (exists($$refConfig{'USERAGENT'}))           { $winConfig->tfUserAgent->Text($$refConfig{'USERAGENT'});                  }
   else                                            { $winConfig->tfUserAgent->Text('XL-Whois (http://www.le-tools.com)');
-                                                    $$refConfig{'USERAGENT'} = 'XL-Whois (http://www.le-tools.com)';        } # Use Default
-  if (exists($$refConfig{'OPT_IPv4'}))            { $winConfig->chIPv4->Checked($$refConfig{'OPT_IPv4'});                   }
-  else                                            { $winConfig->chIPv4->Checked(1);                                         } # Default checked
-  if (exists($$refConfig{'OPT_IPv6'}))            { $winConfig->chIPv6->Checked($$refConfig{'OPT_IPv6'});                   }
-  else                                            { $winConfig->chIPv6->Checked(1);                                         } # Default checked
-  if (exists($$refConfig{'OPT_HOSTNAME'}))        { $winConfig->chHostname->Checked($$refConfig{'OPT_HOSTNAME'});           }
-  else                                            { $winConfig->chHostname->Checked(1);                                     } # Default checked
-  if (exists($$refConfig{'OPT_DOMAIN_NAME'}))     { $winConfig->chDomainName->Checked($$refConfig{'OPT_DOMAIN_NAME'});      }
-  else                                            { $winConfig->chDomainName->Checked(1);                                   } # Default checked
+                                                    $$refConfig{'USERAGENT'} = 'XL-Whois (http://www.le-tools.com)';          } # Use Default
+  if (exists($$refConfig{'OPT_IPv4'}))            { $winConfig->chIPv4->Checked($$refConfig{'OPT_IPv4'});                     }
+  else                                            { $winConfig->chIPv4->Checked(1);                                           } # Default checked
+  if (exists($$refConfig{'OPT_IPv6'}))            { $winConfig->chIPv6->Checked($$refConfig{'OPT_IPv6'});                     }
+  else                                            { $winConfig->chIPv6->Checked(1);                                           } # Default checked
+  if (exists($$refConfig{'OPT_HOSTNAME'}))        { $winConfig->chHostname->Checked($$refConfig{'OPT_HOSTNAME'});             }
+  else                                            { $winConfig->chHostname->Checked(1);                                       } # Default checked
+  if (exists($$refConfig{'OPT_DOMAIN_NAME'}))     { $winConfig->chDomainName->Checked($$refConfig{'OPT_DOMAIN_NAME'});        }
+  else                                            { $winConfig->chDomainName->Checked(1);                                     } # Default checked
   
   # Folder for report
   if (exists($$refConfig{'DIR_REPORT'}) and
-      -d $$refConfig{'DIR_REPORT'})               { $winConfig->tfReportDir->Text($$refConfig{'DIR_REPORT'});         }
-  if (exists($$refConfig{'REPORT_REPLACE'}))      { $winConfig->chReplace->Checked($$refConfig{'REPORT_REPLACE'});    }
-  else                                            { $winConfig->chReplace->Checked(0);                                } # Default is not checked
-  if (exists($$refConfig{'AUTO_VIEWING'}))        { $winConfig->chAutoViewing->Checked($$refConfig{'AUTO_VIEWING'});  }
-  else                                            { $winConfig->chAutoViewing->Checked(1);                            } # Default is checked
-  if (exists($$refConfig{'MAX_VIEW'}))            { $winConfig->tfMaxView->Text($$refConfig{'MAX_VIEW'});             }
-  else                                            { $winConfig->tfMaxView->Text(25); $$refConfig{'MAX_VIEW'} = 25;    } # Default is 25
-  if (exists($$refConfig{'AUTO_VIEW_DIR'}))       { $winConfig->chAutoViewDir->Checked($$refConfig{'AUTO_VIEW_DIR'}); }
-  else                                            { $winConfig->chAutoViewDir->Checked(0);                            } # Default is not checked
+      -d $$refConfig{'DIR_REPORT'})               { $winConfig->tfReportDir->Text($$refConfig{'DIR_REPORT'});                 }
+  if (exists($$refConfig{'REPORT_REPLACE'}))      { $winConfig->chReplace->Checked($$refConfig{'REPORT_REPLACE'});            }
+  else                                            { $winConfig->chReplace->Checked(0);                                        } # Default is not checked
+  if (exists($$refConfig{'AUTO_VIEWING'}))        { $winConfig->chAutoViewing->Checked($$refConfig{'AUTO_VIEWING'});          }
+  else                                            { $winConfig->chAutoViewing->Checked(1);                                    } # Default is checked
+  if (exists($$refConfig{'MAX_VIEW'}))            { $winConfig->tfMaxView->Text($$refConfig{'MAX_VIEW'});                     }
+  else                                            { $winConfig->tfMaxView->Text(25); $$refConfig{'MAX_VIEW'} = 25;            } # Default is 25
+  if (exists($$refConfig{'AUTO_VIEW_DIR'}))       { $winConfig->chAutoViewDir->Checked($$refConfig{'AUTO_VIEW_DIR'});         }
+  else                                            { $winConfig->chAutoViewDir->Checked(0);                                    } # Default is not checked
 
   # Logging Database location
-  if (exists($$refConfig{'CHECK_LOGGING_DB'}))    { $win->chCheckLogging->Checked($$refConfig{'CHECK_LOGGING_DB'});   }
-  else                                            { $win->chCheckLogging->Checked(1);                                 } # Default is checked
+  if (exists($$refConfig{'CHECK_LOGGING_DB'}))    { $win->chCheckLogging->Checked($$refConfig{'CHECK_LOGGING_DB'});           }
+  else                                            { $win->chCheckLogging->Checked(1);                                         } # Default is checked
   if (exists($$refConfig{'LOGGING_DB_FILE'}) and
       -f $$refConfig{'LOGGING_DB_FILE'})          { $winConfig->tfLogDbFile->Text($$refConfig{'LOGGING_DB_FILE'}); $winConfig->chLogActivate->Enable(); }
-  if (exists($$refConfig{'LOGGING'}))             { $winConfig->chLogActivate->Checked($$refConfig{'LOGGING'});           }
-  else                                            { $winConfig->chLogActivate->Checked(1);                                } # Default is checked
+  if (exists($$refConfig{'LOGGING'}))             { $winConfig->chLogActivate->Checked($$refConfig{'LOGGING'});               }
+  else                                            { $winConfig->chLogActivate->Checked(1);                                    } # Default is checked
   if ($$refConfig{'LOGGING'}) { $win->tfComment->Enable(); } # If logging activated, comment can be added
 
   # Whois Database
-  if (exists($$refConfig{'CHECK_WHOIS_DB'}))      { $win->cbCheckWhoisDB->SetCurSel($$refConfig{'CHECK_WHOIS_DB'}); }
-  else                                            { $win->cbCheckWhoisDB->SetCurSel(1);                             } # Default is "If present, ask"
-  if (exists($$refConfig{'WHOIS_DB_FILE'}) and
-      -f $$refConfig{'WHOIS_DB_FILE'})            { $winConfig->tfDbFile->Text($$refConfig{'WHOIS_DB_FILE'});             }
-  if (exists($$refConfig{'WHOIS_CACHE'}))         { $winConfig->chDBCache->Checked($$refConfig{'WHOIS_CACHE'});           }
-  else                                            { $winConfig->chDBCache->Checked(1);                                    } # Default is checked
+  if (exists($$refConfig{'CHECK_WHOIS_DB'}))      { $win->cbCheckWhoisDB->SetCurSel($$refConfig{'CHECK_WHOIS_DB'});           }
+  else                                            { $win->cbCheckWhoisDB->SetCurSel(1);                                       } # Default is "If present, ask"
+  if (exists($$refConfig{'WHOIS_DB_FILE'}) and -f $$refConfig{'WHOIS_DB_FILE'}) {
+    $winConfig->tfDbFile->Text($$refConfig{'WHOIS_DB_FILE'}); # Whois Data File
+    # Set Network Whois Data cache folder
+    my $whoisDir = $$refConfig{'WHOIS_DB_FILE'}; # Same folder of Whois Database
+    my(@partsWhoisDBPath) = split(/\\/, $whoisDir);
+    if (pop(@partsWhoisDBPath) =~ /\./) { while ($whoisDir =~ /[^\\]$/) { chop($whoisDir); } }
+    my $networkWhoisCacheDir = $whoisDir. 'cache';
+    if (!-d $networkWhoisCacheDir) { mkdir($networkWhoisCacheDir); }
+    $$refConfig{'WHOIS_DATA_CACHE'} = $networkWhoisCacheDir;
+  }
+  if (exists($$refConfig{'WHOIS_CACHE'}))         { $winConfig->chDBCache->Checked($$refConfig{'WHOIS_CACHE'});               }
+  else                                            { $winConfig->chDBCache->Checked(1);                                        } # Default is checked
   
   # TLD Database location
   if (exists($$refConfig{'TLD_DB_FILE'}) and
-      -f $$refConfig{'TLD_DB_FILE'})              { $winConfig->tfTLDDB->Text($$refConfig{'TLD_DB_FILE'});                  }
-  if (exists($$refConfig{'TLD_DB_AUTO_UPDATE'}))  { $winConfig->chTLDDBAutoUpt->Checked($$refConfig{'TLD_DB_AUTO_UPDATE'}); }
-  else                                            { $winConfig->chTLDDBAutoUpt->Checked(1);                                 } # Default is checked
+      -f $$refConfig{'TLD_DB_FILE'})              { $winConfig->tfTLDDB->Text($$refConfig{'TLD_DB_FILE'});                    }
+  if (exists($$refConfig{'TLD_DB_AUTO_UPDATE'}))  { $winConfig->chTLDDBAutoUpt->Checked($$refConfig{'TLD_DB_AUTO_UPDATE'});   }
+  else                                            { $winConfig->chTLDDBAutoUpt->Checked(1);                                   } # Default is checked
   
   # WS Database location
   if (exists($$refConfig{'WS_DB_FILE'}) and
-      -f $$refConfig{'WS_DB_FILE'})               { $winConfig->tfWSDB->Text($$refConfig{'WS_DB_FILE'});                  }
-  if (exists($$refConfig{'WS_DB_AUTO_UPDATE'}))   { $winConfig->chWSDBAutoUpt->Checked($$refConfig{'WS_DB_AUTO_UPDATE'}); }
-  else                                            { $winConfig->chWSDBAutoUpt->Checked(1);                                } # Default is checked
+      -f $$refConfig{'WS_DB_FILE'})               { $winConfig->tfWSDB->Text($$refConfig{'WS_DB_FILE'});                      }
+  if (exists($$refConfig{'WS_DB_AUTO_UPDATE'}))   { $winConfig->chWSDBAutoUpt->Checked($$refConfig{'WS_DB_AUTO_UPDATE'});     }
+  else                                            { $winConfig->chWSDBAutoUpt->Checked(1);                                    } # Default is checked
   
   # IPv4 Database location
   if (exists($$refConfig{'IPv4_DB_FILE'}) and
