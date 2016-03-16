@@ -40,6 +40,7 @@ To do
 -----
 
 - Add support to IPv6 in the Whois Database
+- Add a function for advanced whois query
 
 
 Packaging

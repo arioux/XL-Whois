@@ -18,8 +18,7 @@
 -->
 <head>
 <title>XL-Whois Documentation</title>
-<link rel="stylesheet" type="text/css" href="../Style.css">
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <style>
 li { margin: 0.5em 0; }
 </style>
@@ -85,7 +84,7 @@ above manually, in case you already have some of these databases.</p>
 
 <a name="XL-WhoisMainWindow">
 <h2 style="margin-top:1.5em;">Main Window</h2>
-<img src="XL-WhoisMainWindow.png" alt="Xl-Whois Main Window" width="512" height="327" border="0">
+<img src="XL-WhoisMainWindow.png" alt="Xl-Whois Main Window" width="513" height="357" border="0">
 </a>
 <p>In this window, you can select options for the current whois request(s):</p>
 <ul>
@@ -99,6 +98,12 @@ request:</li>
 to be able to send a <strong>Network whois</strong> about a Domain name, XL-Whois 
 use system nsLookup to resolve the requested item.</li>
 </ul>
+<li><strong>Registry</strong>: This option may be used if you want to force the 
+network whois to be queried to the selected registry. The <strong>IPv4 Database</strong> 
+(ipv4-address-space.csv) from IANA contains "errors" that affect whois tools. For 
+example, 163/8 is supposed to be administered by APNIC, but 163.247/16 is administered 
+by LACNIC. So, in this case, you will get a better answer if you force the registry 
+to LACNIC.</li>
 <li><strong>Check db:</strong> There are two databases that can be used here:</li>
 <ul> 
 <li><strong>Whois Database</strong>: Details about <strong>Network whois</strong> 
@@ -140,10 +145,10 @@ height="350" border="0">
 <li><strong>Export Lang.ini:</strong> Use this function to translate XL-Whois GUI. 
 See <a href="./XL-Whois.html#Translation">Translation</a> for help about this 
 functionality.</li>
-<li><strong>Check Update:</strong> Check on <a href="https://www.le-tools.com" 
-target="_blank">www.le-tools.com</a> if a tool update is available.</li>
-<li><strong>Check for update at startup:</strong> Check update everytime 
-XL-Whois is started.</li>
+<li><strong>Check Update:</strong> Check on <a href="https://le-tools.com" 
+target="_blank">le-tools.com</a> if a tool update is available.</li>
+<li><strong>Check for update at startup:</strong> Check if an update is available 
+everytime XL-Whois is started.</li>
 </ul>
 <p>In <strong>General</strong> section, you can:</p>
 <ul>

@@ -9,7 +9,7 @@
 #               into a database that can be used with other tools of the
 #               XL-Toolkit.
 # Creation    : 2015-09-30
-# Modified    : 2016-03-12
+# Modified    : 2016-03-16
 my $VERSION   = "2.2";
 # Author      : Alain Rioux (admin@le-tools.com)
 #
@@ -122,7 +122,7 @@ my $screen    = Win32::GUI::GetDesktopWindow(); # Screen resolution
 my $scrnX     = Win32::GUI::Width($screen);
 my $scrnY     = Win32::GUI::Height($screen);
 my $winWidth  = 503;
-my $winHeight = 317;
+my $winHeight = 347;
 my $winPosX   = ($scrnX - $winWidth)  / 2;
 my $winPosY   = ($scrnY - $winHeight) / 2;
 
@@ -209,7 +209,7 @@ $win->AddLabel(       -name        => 'lblInput'              ,
                       -text        => $STR{'lblInput'}        ,
                       -font        => $font12                 , );
 $win->AddLabel(       -name        => 'lblOptions'            ,
-                      -size        => [ 80, 22]               ,
+                      -size        => [115, 22]               ,
                       -pos         => [  5,125]               ,
                       -background  => [255, 255, 255]         ,
                       -foreground  => [  0, 102, 204]         ,
@@ -233,9 +233,24 @@ $win->AddCheckbox(    -name        => 'chDNS'                 ,
                       -background  => [255, 255, 255]         ,
                       -text        => 'DNS Records'           ,
                       -font        => $font10                 , );
+$win->AddLabel(       -name        => 'lblWSSelect'           ,
+                      -size        => [115, 22]               ,
+                      -pos         => [  5,157]               ,
+                      -background  => [255, 255, 255]         ,
+                      -foreground  => [  0, 102, 204]         ,
+                      -text        => $STR{'WSSelect'}.':'    ,
+                      -font        => $fontGB                 , );
+$win->AddCombobox(    -name        => 'cbWSSelect'            ,
+                      -dropdownlist => 1                      ,
+                      -vscroll     => 1                       ,
+                      -size        => [130, 80]               ,
+                      -pos         => [130,155]               ,
+                      -font        => $font10                 , );
+$win->cbWSSelect->Add($STR{'WSSelect1'}, 'ARIN', 'LACNIC', 'RIPE', 'AFRINIC', 'APNIC');
+$win->cbWSSelect->SetCurSel(0);
 $win->AddLabel(       -name        => 'lblCheckDB'            ,
-                      -size        => [100, 22]               ,
-                      -pos         => [  5,163]               ,
+                      -size        => [115, 22]               ,
+                      -pos         => [  5,192]               ,
                       -background  => [255, 255, 255]         ,
                       -foreground  => [  0, 102, 204]         ,
                       -text        => $STR{'lblCheckDB'}      ,
@@ -244,37 +259,37 @@ $win->AddCombobox(    -name        => 'cbCheckWhoisDB'        ,
                       -dropdownlist => 1                       ,
                       -vscroll     => 1                       ,
                       -size        => [130, 80]               ,
-                      -pos         => [130,160]               ,
+                      -pos         => [130,190]               ,
                       -font        => $font10                 , );
 $win->cbCheckWhoisDB->Add($STR{'cbCheckWhoisDB1'}, $STR{'cbCheckWhoisDB2'}, $STR{'cbCheckWhoisDB3'}, $STR{'cbCheckWhoisDB4'});
 $win->AddCheckbox(    -name        => 'chCheckLogging'        ,
                       -size        => [210, 20]               ,
-                      -pos         => [275,161]               ,
+                      -pos         => [275,191]               ,
                       -background  => [255, 255, 255]         ,
                       -text        => $STR{'chCheckLogging'}  ,
                       -font        => $font10                 , );
 $win->AddLabel(       -name        => 'lblAddComment'         ,
-                      -size        => [140, 22]               ,
-                      -pos         => [  5,201]               ,
+                      -size        => [115, 22]               ,
+                      -pos         => [  5,225]               ,
                       -background  => [255, 255, 255]         ,
                       -foreground  => [  0, 102, 204]         ,
                       -text        => $STR{'lblAddComment'}.':',
                       -font        => $fontGB                 , );
 $win->AddTextfield(   -name        => 'tfComment'             ,
                       -size        => [300, 22]               ,
-                      -pos         => [130,201]               ,
+                      -pos         => [130,225]               ,
                       -disabled    => 1                       , );
 
 # Buttons
 $win->AddLabel(       -name        => 'lblFooter'             ,
                       -size        => [494, 80]               ,
-                      -pos         => [  2,235]               ,
+                      -pos         => [  2,265]               ,
                       -valign      => 'top'                   ,
                       -background  => [250, 250, 250]         ,
                       -foreground  => [128, 128, 128]         , );
 $win->AddLabel(       -name        => 'lblNotReady'           ,
                       -size        => [170, 22]               ,
-                      -pos         => [ 10,255]               ,
+                      -pos         => [ 10,275]               ,
                       -background  => [250, 250, 250]         ,
                       -foreground  => [  0, 102, 204]         ,
                       -text        => $STR{'lblNotReady'}     ,
@@ -282,7 +297,7 @@ $win->AddLabel(       -name        => 'lblNotReady'           ,
                       -notify      => 1                       , );
 $win->AddButton(      -name        => 'btnWhois'              ,
                       -size        => [ 40, 40]               ,
-                      -pos         => [270,243]               ,
+                      -pos         => [270,273]               ,
                       -bitmap      => $whoisBmp               ,
                       -background  => [250, 250, 250]         ,
                       -tip         => $STR{'btnWhoisTip'}     ,
@@ -291,25 +306,25 @@ $win->AddButton(      -name        => 'btnWhois'              ,
                       -default     => 1                       , );
 $win->AddButton(      -name        => 'btnWinDatabase'        ,
                       -size        => [ 40, 40]               ,
-                      -pos         => [315,243]               ,
+                      -pos         => [315,273]               ,
                       -bitmap      => $databaseBmp            ,
                       -background  => [250, 250, 250]         ,
                       -tip         => $STR{'btnWinDatabaseTip'}, );
 $win->AddButton(      -name        => 'btnWinConfig'          ,
                       -size        => [ 40, 40]               ,
-                      -pos         => [360,243]               ,
+                      -pos         => [360,273]               ,
                       -bitmap      => $config32Bmp            ,
                       -background  => [250, 250, 250]         ,
                       -tip         => 'Configuration'         , );
 $win->AddButton(      -name        => 'btnHelp'               ,
                       -size        => [ 40, 40]               ,
-                      -pos         => [405,243]               ,
+                      -pos         => [405,273]               ,
                       -bitmap      => $helpBmp                ,
                       -background  => [250, 250, 250]         ,
                       -tip         => $STR{'btnHelpTip'}      , );
 $win->AddButton(      -name        => 'btnAbout'              ,
                       -size        => [ 40, 40]               ,
-                      -pos         => [450,243]               ,
+                      -pos         => [450,273]               ,
                       -bitmap      => $aboutBmp               ,
                       -background  => [250, 250, 250]         ,
                       -tip         => $STR{'btnAboutTip'}     , );
@@ -4348,11 +4363,13 @@ sub btnWhois_Click
                 }
                 close(HTML);
                 # Set background color to green in Grid
-                $winDB->DBGrid->SetCellBkColor($lineInGrid, 0, 0x33FF66);
-                $winDB->DBGrid->SetCellBkColor($lineInGrid, 1, 0x33FF66);
-                $winDB->DBGrid->SetCellBkColor($lineInGrid, 2, 0x33FF66);
-                $winDB->DBGrid->SetCellBkColor($lineInGrid, 3, 0x33FF66);
-                $winDB->DBGrid->SetCellBkColor($lineInGrid, 4, 0x33FF66);
+                if ($lineInGrid) {
+                  $winDB->DBGrid->SetCellBkColor($lineInGrid, 0, 0x33FF66);
+                  $winDB->DBGrid->SetCellBkColor($lineInGrid, 1, 0x33FF66);
+                  $winDB->DBGrid->SetCellBkColor($lineInGrid, 2, 0x33FF66);
+                  $winDB->DBGrid->SetCellBkColor($lineInGrid, 3, 0x33FF66);
+                  $winDB->DBGrid->SetCellBkColor($lineInGrid, 4, 0x33FF66);
+                }
               }
             }
           }
@@ -4513,11 +4530,16 @@ sub networkWhois
                   'whois.afrinic.net' => 'AFRINIC', );
   my $tempResponse;
   my $search_options = ['NetName','OrgName'];
+  my $authority;
   
   # Find Authority
-  my $whoisServer    = &registry($ip, $refIPv4, $refIPv6);
-  if (!$whoisServer) { $whoisServer = 'whois.arin.net'; }
-  my $authority      = $rirName{$whoisServer};
+  if (!$win->cbWSSelect->GetCurSel()) {                     # Auto select registry
+    my $whoisServer    = &registry($ip, $refIPv4, $refIPv6);
+    if (!$whoisServer) { $whoisServer = 'whois.arin.net'; }
+    $authority      = $rirName{$whoisServer};
+  } else {                                                  # Force registry
+    $authority = $win->cbWSSelect->GetString($win->cbWSSelect->GetCurSel());
+  }
   
   # Whois to ARIN
   if ($authority eq 'ARIN') {
@@ -6626,7 +6648,9 @@ sub validWSDB
   my $WSdbFile = shift;
   
   eval { json_file_to_perl($WSdbFile); };
-  if (!$@) { return(1); }
+  if (!$@) {
+    return(1);
+  }
   
   return(0);
   
@@ -7300,9 +7324,13 @@ sub downloadWSDB
     });
     
     # Save data in a file
+    my @lines = split(/\n/, $downloadData);
     if ($response and $response->is_success) {
       open(WSDB,">$localWSDB");
-      print WSDB $downloadData;
+      foreach (@lines) {
+        # Remove comments from the JSON File (comments crash the parser)
+        if ($_ !~ /\s+\/\//) { print WSDB "$_\n"; }
+      }
       close(WSDB);
     }
     $downloadData = undef;

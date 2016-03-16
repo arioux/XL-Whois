@@ -9041,11 +9041,48 @@ zs7Py8vLysrKysrKy8vLzs7Oz8/P0NDQ4eHh////////////////////////////////////////
 ////////////////////////////////
 ) );
   
+  my $checkBmp = Win32::GUI::BitmapInline->new( q(
+Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA////
+////////////z/LgaN2gJt19B+RxB+RxJtx9aN2gz/Lg////////////////////////9vz5ZdSa
+AtJlAOdvAPV1AP15APx5APR1AOZuAtFlZdSa9vz5////////////9vz5PsZ/AMdfANRmAONtAOpw
+APN0APd2AO9yAOJsANNlAMZfPsd/9vz5////////Zc+XALpZAMJdAM5iH85wuOfMo+K+B95sAORt
+ANloAM1iAMNdAbxaZtCY////z+/fA7RYAbhZAL5bH8Nq3vPn////////tejKB89lANBjAcdgAcBd
+A7xcB7hbz/Dfas+aB7ZbBrlcIr1p3vPn////////////////tefKCsRhBsVhCMFgCr1gDLpfbNCc
+LrxzELhhJrxr3/Pn////////s+bJuOfM////////tubKFcFlFMJnFb5mFbtkML10GbVjHLloeNOg
+////////tebJJsZxJ8dyuefM////////t+bLIr9rI79uIrxtHbdmIrdpK7xxNL1zuObKpN+9OMV5
+QM2EQc+FPMh9uufN////////uObLMr9zMb91I7hqP8B9OsB6RMSCRcWCSciGU8yNV8+RWtCTWtCT
+UMmIvejP////////ftOkPcF8QMB+d9KjRMOBUseKYs2VcNKfd9WkfNeogtmsiduwjNyzbc+at+XK
+5fbsVsaIR8ODedOk0/DhRsGBW8mQa8+betSlh9iukdy1l965l965kty2idmvbs+bV8eKX8uSScKD
+1PHh////fdSmbc+cctGggtaqj9qzmN25nd+9nt+9mt66kdu1hdetd9KjcNCef9Sn////////9/z6
+ddGgl924itivlty4oN++peHCpuHCouDAmd26j9mzmd26dtGh+Pz6////////////+P36md25u+jQ
+wOrUrOTHrOPHreTHr+TIwuvVuufPmd25+P36////////////////////////3vTor+THquLErePH
+rePHquLEsOTI3/Tp////////////////
+) );
+  
+  my $errorBmp = Win32::GUI::BitmapInline->new( q(
+Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA////
+////////////z8/yaGjdJibdBwfkBwfkJibcaGjdz8/y////////////////////////9vb8ZWXU
+AgLSAADnAAD1AAD9AAD8AAD0AADmAgLRZWXU9vb8////////////9vb8Pj7GAADHAADUAADjAADv
+AAD3AAD3AADvAADiAADTAADGPj7H9vb8////////ZWXPAAC6AADCAADKAADSAADkAADqAADqAADk
+AADSAADKAADDAQG8ZmbQ////z8/vAwO0AQG4AAC8o6Ph1tbxJyfPAADcAADcJyfP19fxo6PhAQK+
+AwS8Bwe4z8/wamrPBwe2Bga5BAS519fx////5eX2KCjLKSnL5ub2////1tbxBwe8Cgq9DAy6bGzQ
+Li68EBC4EBC7EBC/MTHD5ub2////5eX25eX2////5eX2MjLFFBTCFRW+FRW7MDC9GRm1HBy5Hx+9
+ISHBIyPFPDzH5eX2////////5eX2PT3HJibHJCTDIyO/IiK8HR23IiK3Kyu8Li6/MzPDOTnHRETH
+5eX2////////5eX2RUXHOzvIPT3GOTnDMTG/IyO4Pz/AOjrARETESUnHTEzG5eX2////5eX25ub2
+////5eX2V1fKV1fMSUnGPT3BQEDAd3fSRETDUlLHUFDG19fx////5eX2cHDQcXHR5ub2////1tbx
+UlLHVVXIR0fDeXnT09PwRkbBW1vJYGDLqani19fxc3PQl5fel5fec3PQ19fxqaniY2PMX1/LSUnC
+1NTx////fX3UbW3PcnLRdXXReHjSmJjdnZ3fnp7fmpreenrTeHjSd3fScHDQf3/U////////9/f8
+dXXRl5fdiorYlpbcoKDfpaXhpqbhoqLgmZndj4/ZmZnddnbR+Pj8////////////+Pj9mZndu7vo
+wMDqrKzkrKzjra3kr6/kwsLrurrnmZnd+Pj9////////////////////////3t70r6/kqqrira3j
+ra3jqqrisLDk39/0////////////////
+) );
+  
   return($winICO, $logoBmp, $logo128Bmp, $browseBmp, $openDirBmp, $fileOpenBmp,
          $fileNewBmp, $downloadBmp, $clipboardBmp, $whoisBmp, $databaseBmp,
          $config32Bmp, $config128Bmp, $helpBmp, $aboutBmp, $exportBmp,
          $importBmp, $extractBmp, $validdbBmp, $searchDB, $searchDB_p,
-         $searchDB_n, $filterDB, $filterDB_p, $filterDB_n, $database16);
+         $searchDB_n, $filterDB, $filterDB_p, $filterDB_n, $database16,
+         $checkBmp, $errorBmp);
 }
 
 #------------------------------------------------------------------------------#

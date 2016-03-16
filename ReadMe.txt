@@ -47,6 +47,14 @@ What do you need
 
 Versions History
 ----------------
+* Version 2.2
+	- New option to force the registry to use for network whois
+	- New Configuration Wizard (when using the tool for the first time)
+	- Fixed an issue related to whois server database (tld.json) that contains comment lines
+	- Fixed issues if the user delete the path of Logging database, Whois Database or folder for reports
+	- Fixed an issue when an ISP is deleted, network whois data was not deleted
+	- Fixed an issue when an ISP is added, green background in grid was not set
+	- Fixed an issue with line breaks when an ISP is added from LACNIC
 * Version 2.1
 	- Fixed various issues with the Configuration Wizard
 	- Fixed various issues with database changes in the GUI
@@ -153,11 +161,3 @@ Filter icons (use, delete, add) and Search icons (search, search previous, searc
 next) in the Whois Database Window come from the Fugue Icons collection by Yusuke 
 Kamiyamane (http://p.yusukekamiyamane.com/) and are licensed under a Creative 
 Commons Attribution 3.0 License.
-
-Download icon in the Update Window come from Sinem Icons by Robsonbillponte 
-(http://robsonbillponte666.deviantart.com/) and is distributed as freeware.
-
-Error icon in the Update Window come from Web 2 Icons by Cheezen 
-(http://cheezen.deviantart.com/) and is distributed as freeware.
-
-

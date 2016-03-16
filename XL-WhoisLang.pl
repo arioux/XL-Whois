@@ -146,6 +146,8 @@ sub loadDefaultStr
   $$refSTR{'lblInput'}          = 'Clipboard content is always used as input data';
   $$refSTR{'errClipboard'}      = 'There is no valid data in the Clipboard...';
   $$refSTR{'Options'}           = 'Options';
+  $$refSTR{'WSSelect'}          = 'Registry';
+  $$refSTR{'WSSelect1'}         = 'Auto';
   $$refSTR{'lblCheckDB'}        = 'Check db:';
   $$refSTR{'cbCheckWhoisDB1'}   = "Don\'t check";
   $$refSTR{'cbCheckWhoisDB2'}   = 'If present, ask';
@@ -187,7 +189,10 @@ sub loadDefaultStr
   $$refSTR{'update3'}             = 'Update';
   $$refSTR{'update4'}             = 'Version';
   $$refSTR{'update5'}             = 'is available. Download it';
-  $$refSTR{'firstStart1'}         = 'Configuring General options...';
+  $$refSTR{'SetGenOpt'}           = 'Set General options';
+  $$refSTR{'winCW'}               = 'Configuration Wizard';
+  $$refSTR{'configSet'}           = 'XL-Tool has been configured !';
+  $$refSTR{'configSetPart'}       = 'Aborted ! XL-Tool has been partially configured.';
   # General tab
   $$refSTR{'tool'}                = 'Tool';
   $$refSTR{'export'}              = 'Export';
