@@ -5,7 +5,7 @@
 # Website         : http://le-tools.com/
 # GitHub		      : https://github.com/arioux/XL-Whois
 # Creation        : 2015-09-30
-# Modified        : 2015-12-10
+# Modified        : 2016-04-08
 # Author          : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015  Alain Rioux (le-tools.com)
@@ -204,36 +204,36 @@ sub loadDefaultStr
   $$refSTR{'lblNsLookupTO2'}      = 'seconds';
   $$refSTR{'UserAgent'}           = 'User-Agent';
   # Storage tab
-  $$refSTR{'lblReport'}           = 'Folder for reports:';
+  $$refSTR{'lblReport'}           = 'Folder for reports';
   $$refSTR{'chAutoViewing'}       = 'Auto viewing, max reports:';
   $$refSTR{'btnReportDirTip'}     = 'Select a folder where reports will be saved';
   $$refSTR{'btnOpenDirTip'}       = 'View content directory in Windows Explorer';
   $$refSTR{'chReplace'}           = 'If report exists, replace it';
   $$refSTR{'chAutoViewDir'}       = 'Open folder when finished';
-  $$refSTR{'lblLogDbFile'}        = 'Logging Database location:';
+  $$refSTR{'lblLogDbFile'}        = 'Logging Database';
   $$refSTR{'chLogActivate'}       = 'Activate logging' ;
   $$refSTR{'btnLogDbFileTip'}     = 'Select the Logging Database file';
   $$refSTR{'btnLogDbFileNewTip'}  = 'Create a new Logging Database';
   $$refSTR{'btnLogDbViewTip'}     = 'View Logging Database';
   $$refSTR{'btnLogDbFileNew'}     = 'Select the Logging Database location:';
-  $$refSTR{'lblDbFile'}           = 'Whois Database location:';
+  $$refSTR{'lblDbFile'}           = 'Whois Database';
   $$refSTR{'chDBCache'}           = 'Store Network whois data';
   $$refSTR{'btnDbFileTip'}        = 'Select the Whois Database file';
   $$refSTR{'btnDbFileNewTip'}     = 'Create a new Whois Database';
   $$refSTR{'btnDbFileNew'}        = 'Select the Whois Database location:';
   $$refSTR{'btnWhoisDbViewTip'}   = 'View Whois Database';
   # Databases tab
-  $$refSTR{'lblTLDDB'}            = 'TLD Database location:';
+  $$refSTR{'lblTLDDB'}            = 'TLD Database';
   $$refSTR{'chDBAutoUpt'}         = 'Check update on startup';
   $$refSTR{'btnTLDDBTip'}         = 'Select the TLD database file';
   $$refSTR{'btnTLDDBUptTip'}      = 'Check update for TLD Database';
-  $$refSTR{'lblWSDB'}             = 'Whois Server Database location:';
+  $$refSTR{'lblWSDB'}             = 'Whois Server Database';
   $$refSTR{'btnWSDBTip'}          = 'Select the Whois Server database file';
   $$refSTR{'btnWSDBUptTip'}       = 'Check update for Whois Server Database';
-  $$refSTR{'lblIPv4DB'}           = 'IPv4 Database location:';
+  $$refSTR{'lblIPv4DB'}           = 'IPv4 Database';
   $$refSTR{'btnIPv4DBTip'}        = 'Select the IPv4 database file';
   $$refSTR{'btnIPv4DBUptTip'}     = 'Check update for IPv4 Database';
-  $$refSTR{'lblIPv6DB'}           = 'IPv6 Database location:';
+  $$refSTR{'lblIPv6DB'}           = 'IPv6 Database';
   $$refSTR{'btnIPv6DBTip'}        = 'Select the IPv6 database file';
   $$refSTR{'btnIPv6DBUptTip'}     = 'Check update for IPv6 Database';
   $$refSTR{'errDownloadingDB'}    = 'Error downloading Database...';
@@ -268,6 +268,7 @@ sub loadDefaultStr
   $$refSTR{'btnFilterDBTip'}      = 'Use Filter';
   $$refSTR{'btnFilterDB_delTip'}  = 'Delete filters';
   $$refSTR{'btnFilterDB_addTip'}  = 'Add filter';
+  $$refSTR{'getAllRanges'}        = 'Get all related ranges';
   $$refSTR{'gridSelectAll'}       = 'Select All';
   $$refSTR{'lineCopy'}            = 'Copy lines';
   $$refSTR{'deleteLine'}          = 'Delete lines';
@@ -297,6 +298,16 @@ sub loadDefaultStr
   $$refSTR{'errReadingNetworkData'} = 'Error reading Network Whois Data file: ';
   $$refSTR{'deletingISP'}         = 'Deleting ISP entries...';
   
+  # Add ISP Ranges Window
+  $$refSTR{'winAddRanges'}        = 'Add ISP Ranges';
+  $$refSTR{'winAddRSelected'}     = 'Add selected ranges';
+  $$refSTR{'queryASNorID'}        = 'Query the registry for the ASN or ID';
+  $$refSTR{'queryallRange1'}      = 'Query ';
+  $$refSTR{'queryallRange2'}      = ' for all ranges related to ';
+  $$refSTR{'remOverlap'}          = 'Remove overlapping ranges from the list';
+  $$refSTR{'noASNorIDFound'}      = 'No ASN or ID found.';
+  $$refSTR{'noRangeISP'}          = 'No other ranges found for the ISP.';
+  
   # Network Whois Data Window
   $$refSTR{'winNWD'} = 'Network Whois Data';
   
@@ -304,8 +315,8 @@ sub loadDefaultStr
   $$refSTR{'winFilter'}       = 'Filters';
   $$refSTR{'lblAddFilterOp'}  = 'Add Filter Operator:';
   $$refSTR{'lblFilterField'}  = 'Field';
-  $$refSTR{'cbFilterField1'}  = 'Start IP';
-  $$refSTR{'cbFilterField2'}  = 'End IP';
+  $$refSTR{'cbFilterField1'}  = 'StartIP';
+  $$refSTR{'cbFilterField2'}  = 'EndIP';
   $$refSTR{'cbFilterField3'}  = 'ISP';
   $$refSTR{'cbFilterField4'}  = 'Country';
   $$refSTR{'lblOperator'}     = 'Operator:';

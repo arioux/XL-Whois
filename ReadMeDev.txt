@@ -1,11 +1,13 @@
 XL-Whois
-Description : Part of the XL-Toolkit, XL-Whois is a tool to gather whois
-              information on domain and IP address. It store the responses
-              into a database that can be used with other tools of the
-              XL-Toolkit.
-Author 		: Alain Rioux (admin@le-tools.com)
-WebSite		: http://le-tools.com/XL-Whois.html
-GitHub		: https://github.com/arioux/XL-Whois
+Description 	: Part of the XL-Toolkit, XL-Whois is a tool to gather whois
+								information on domain names and IP addresses. It store the 
+								responses into a database that can be used with other tools 
+								of the XL-Toolkit.
+Author 				: Alain Rioux (admin@le-tools.com)
+WebSite				: http://le-tools.com/XL-Whois.html
+GitHub				: https://github.com/arioux/XL-Whois
+Documentation	: http://le-tools.com/XL-WhoisDoc.html
+FossHub      	: http://code.fosshub.com/XL-Whois
 
 
 Development
@@ -31,16 +33,23 @@ following modules installed:
 - Net-DNS (v1.02)
 - Net-CIDR (v0.17)
 - Net-IP-Lite (v0.03)
+- NetAddr-IP (v4.078)
 - JSON::Parse (v0.33)
 - base (v2.15)
 - HTTP-Message (v6.06)
+- REST-Client (v273)
+- XML-MyXML (v0.9007)
 
 
 To do
 -----
 
-- Add support to IPv6 in the Whois Database
-- Add a function for advanced whois query
+- Whois Database Window
+	- Mixed sort for IPv4 and IPv6
+	- Edit filters function
+	- Add a full date option (grid)
+- Option to choose the ISP Name (auto parsing doesn't always give the best result)
+- Reduce size if possible (for packaging)
 
 
 Packaging
