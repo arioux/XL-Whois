@@ -7,7 +7,7 @@ Author 				: Alain Rioux (admin@le-tools.com)
 WebSite				: http://le-tools.com/XL-Whois.html
 GitHub				: https://github.com/arioux/XL-Whois
 Documentation	: http://le-tools.com/XL-WhoisDoc.html
-FossHub      	: http://code.fosshub.com/XL-Whois
+CodePlex			: https://xlwhois.codeplex.com/
 
 
 Licence

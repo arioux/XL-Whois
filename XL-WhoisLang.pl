@@ -2,13 +2,15 @@
 # Perl - v: 5.16.3
 #------------------------------------------------------------------------------#
 # XL-WhoisLang.pl : Strings for XL-Whois
-# Website         : http://le-tools.com/
-# GitHub		      : https://github.com/arioux/XL-Whois
+# WebSite				  : http://le-tools.com/XL-Whois.html
+# Documentation	  : http://le-tools.com/XL-WhoisDoc.html
+# CodePlex			  : https://xlwhois.codeplex.com/
+# GitHub				  : https://github.com/arioux/XL-Whois
 # Creation        : 2015-09-30
-# Modified        : 2016-04-08
+# Modified        : 2016-09-09
 # Author          : Alain Rioux (admin@le-tools.com)
 #
-# Copyright (C) 2015  Alain Rioux (le-tools.com)
+# Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -85,9 +87,9 @@ sub loadDefaultStr
   $$refSTR{'errWritingReport'}  = 'Error writing report: ';
   $$refSTR{'errViewingReport'}  = 'Error viewing report: ';
   $$refSTR{'errWritingCache'}   = 'Error writing Network Whois Data to cache: ';
-  $$refSTR{'errUpdateLoggingDB'}    = 'Error writing to Logging Database: ';
-  $$refSTR{'errCreatingLoggingDB'}  = 'Error creating the Logging Database: ';
-  $$refSTR{'errCreatingWhoisDB'}    = 'Error creating the Whois Database: ';
+  $$refSTR{'errUpdateLoggingDB'}   = 'Error writing to Logging Database: ';
+  $$refSTR{'errCreatingLoggingDB'} = 'Error creating the Logging Database: ';
+  $$refSTR{'errCreatingWhoisDB'}   = 'Error creating the Whois Database: ';
   $$refSTR{'errTableWhoisDB'}   = 'Whois Database is not valid: No Whois table found.';
   $$refSTR{'errTableLoggingDB'} = 'Logging Database is not valid: No Logging table found.';
   $$refSTR{'errDocumentation'}  = 'Documentation.chm have not been found in the program folder.';
@@ -297,6 +299,7 @@ sub loadDefaultStr
   $$refSTR{'notContains'}         = 'not contains';
   $$refSTR{'errReadingNetworkData'} = 'Error reading Network Whois Data file: ';
   $$refSTR{'deletingISP'}         = 'Deleting ISP entries...';
+  $$refSTR{'sortProgress'}        = 'Sorting in progress';
   
   # Add ISP Ranges Window
   $$refSTR{'winAddRanges'}        = 'Add ISP Ranges';
@@ -343,7 +346,7 @@ sub loadDefaultStr
   $$refSTR{'exportingLoggingDB'}   = 'Exporting Logging Database...';
   
   # Simple Progress window
-  $$refSTR{'winPb'}       = 'Progress';
+  $$refSTR{'winPb'}           = 'Progress';
   
   # About Window
   $$refSTR{'about'}           = 'About';
@@ -353,9 +356,6 @@ sub loadDefaultStr
   $$refSTR{'website'}         = 'Website';
   $$refSTR{'translatorName'}  = '-';
   
-  # Database Update Window
-
-
 }  #--- End loadStrings
 
 

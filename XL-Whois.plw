@@ -1,17 +1,19 @@
 #!/usr/bin/perl
 # Perl - v: 5.16.3
 #------------------------------------------------------------------------------#
-# Tool name   : XL-Whois
-# Website     : http://le-tools.com/
-# GitHub		  : https://github.com/arioux/XL-Whois
-# Description : Part of the XL-Toolkit, XL-Whois is a tool to gather whois
-#               information on domain and IP address. It store the responses
-#               into a database that can be used with other tools of the
-#               XL-Toolkit.
-# Creation    : 2015-09-30
-# Modified    : 2016-07-10
-my $VERSION   = "4.0";
-# Author      : Alain Rioux (admin@le-tools.com)
+# Tool name     : XL-Whois
+# Description   : Part of the XL-Toolkit, XL-Whois is a tool to gather whois
+#                 information on domain and IP address. It store the responses
+#                 into a database that can be used with other tools of the
+#                 XL-Toolkit.
+# WebSite				: http://le-tools.com/XL-Whois.html
+# Documentation	: http://le-tools.com/XL-WhoisDoc.html
+# CodePlex			: https://xlwhois.codeplex.com/
+# GitHub				: https://github.com/arioux/XL-Whois
+# Creation      : 2015-09-30
+# Modified      : 2016-09-09
+my $VERSION     = "4.1";
+# Author        : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
 #
@@ -886,7 +888,7 @@ my $winDB = Win32::GUI::Window->new(  -name        => 'winDB'               ,
                                       -parent      => $winConfig            ,
                                       -text        => $STR{'winDB'}         ,
                                       -pos         => [$winPosX, $winPosY]  ,
-                                      -size        => [$winDBw, $winDBh]    ,
+                                      -size        => [$winDBw+150, $winDBh],
                                       -minsize     => [$winDBw, $winDBh]    ,
                                       -hasmaximize => 1                     ,
                                       -hasminimize => 1                     ,
@@ -1895,9 +1897,9 @@ sub LogDBGrid_EndEdit
 {
   # Local variables
   my ($row, $column) = @_;
-  my $logDbFile = $winConfig->tfLogDbFile->Text();
-  my $date      = $winLogDB->LogDBGrid->GetCellText($row, 0);
-  my $comment   = $winLogDB->LogDBGrid->GetCellText($row, 3);
+  my $logDbFile      = $winConfig->tfLogDbFile->Text();
+  my $date           = $winLogDB->LogDBGrid->GetCellText($row, 0);
+  my $comment        = $winLogDB->LogDBGrid->GetCellText($row, 3);
   if (!$comment) { $comment = 'NULL'; }
   
   # Add or modify comment in Logging Database
@@ -1912,8 +1914,10 @@ sub LogDBGrid_EndEdit
     my $rv  = $sth->execute($comment, $date);
     if ($rv < 0) {
       Win32::GUI::MessageBox($win, $STR{'errUpdatingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
+      $dbh->disconnect();
       return(0);
     }
+    $dbh->disconnect();
   }
 
   return(1);
@@ -2355,7 +2359,7 @@ sub loadWhoisDB
         $winDB->DBGrid->SetCellText($i, 1, $ipEnd);
         $winDB->DBGrid->SetCellText($i, 2, $values[2]);
         $winDB->DBGrid->SetCellText($i, 3, $values[3]);
-        $winDB->DBGrid->SetCellText($i, 4, &time2Date($values[4]));
+        $winDB->DBGrid->SetCellText($i, 4, &time2DateLong($values[4]));
         $winDB->DBGrid->SetCellEditable($i, 0, 0);
         $winDB->DBGrid->SetCellEditable($i, 1, 0);
         $winDB->DBGrid->SetCellEditable($i, 2, 1); # Only ISP and country are editable
@@ -2407,7 +2411,7 @@ sub loadWhoisDB
         $winDB->DBGrid->SetCellText($i, 1, $ipEnd);
         $winDB->DBGrid->SetCellText($i, 2, $values[1]);
         $winDB->DBGrid->SetCellText($i, 3, $values[2]);
-        $winDB->DBGrid->SetCellText($i, 4, &time2Date($values[3]));
+        $winDB->DBGrid->SetCellText($i, 4, &time2DateLong($values[3]));
         $winDB->DBGrid->SetCellEditable($i, 0, 0);
         $winDB->DBGrid->SetCellEditable($i, 1, 0);
         $winDB->DBGrid->SetCellEditable($i, 2, 1); # Only ISP and country are editable
@@ -2718,7 +2722,7 @@ sub exportWhoisDB
       $i = 1;
     }
     # Convert date
-    my $dateStr = &time2Date($fields[$i+2]);
+    my $dateStr = &time2DateLong($fields[$i+2]);
     # Display progress
     $winPb->lblPbCurr->Text("$STR{'exporting'} [$ipStart, $ipEnd]");
     # Save entry to file
@@ -3419,7 +3423,7 @@ sub cbOperator_Change
       if ($field == 1 or $field == 2) {
         @listValues = map { $_->[0] }
                       sort { $a->[1] cmp $b->[1] }
-                      map {[ $_, pack( 'C*', split /\./ ) ]} keys %values;
+                      map { [ $_, eval { if (/\./) { unpack 'N', pack 'C4', split '\.', $_ } else { $_ } } ]} keys %values;
       } else {
         @listValues = sort {lc($a) cmp lc($b)} keys %values;
       }
@@ -3455,34 +3459,41 @@ sub btnApplyFilter_Click
 #--------------------------#
 {
   # Local variables
-  my $field       = $winFilter->cbFilterField->GetCurSel(); # Field: 0 = '' (No value), 1 = 'Start IP', 2 = 'End IP', 3 = 'ISP', 4 = 'Country', 5 = 'Date'
+  my $field       = $winFilter->cbFilterField->GetCurSel(); # Field: 0 = '' (No value), 1 = 'StartIP', 2 = 'EndIP', 3 = 'ISP', 4 = 'Country', 5 = 'Date'
   my $fieldStr    = $winFilter->cbFilterField->GetString($field);
   my $operator    = $winFilter->cbOperator->GetCurSel();
-  my $operatorStr = $winFilter->cbOperator->GetString($operator);
   my $valueStr    = $winFilter->cbFilterValue->GetString($winFilter->cbFilterValue->GetCurSel());
+  # Operator symbol
+  my %operatorSymbol = (1 => ['', '==', '!=', '>', '>=', '<', '<='],
+                        2 => ['', '==', '!=', '>', '>=', '<', '<='],
+                        3 => ['', '==', '!=', '=~', '!~'],
+                        4 => ['', '==', '!='],
+                        5 => ['', '==', '!=', '>', '>=', '<', '<='], );
+  my $addOperatorStr;
   my @currFilters;
   my $filterStr;
   
   # If Add Filter, keep the current filter
   if ($ADD_FILTER == 1) {
     my $currFilterStr  = $winDB->tfFilterDB->Text();
-    my $addOperatorStr = $winFilter->cbAddFilterOp->GetString($winFilter->cbAddFilterOp->GetCurSel()); # Add operator: 0 == OR, 1 == AND
+    $addOperatorStr = $winFilter->cbAddFilterOp->GetString($winFilter->cbAddFilterOp->GetCurSel()); # Add operator: 0 == OR, 1 == AND
     $addOperatorStr =~ s/AND/&&/;
     $addOperatorStr =~ s/OR/||/;
     $filterStr .= "$currFilterStr $addOperatorStr ";
   }
+
   
   # Case of a simple textfield (ISP, Contains or Not contains)
   if ($field == 3 and ($operator == 3 or $operator == 4)) { $valueStr = $winFilter->tfFilterValue->Text(); }
   
   # Filter string
-  $filterStr .= "$fieldStr $operatorStr \"$valueStr\"";
+  $filterStr .= "$fieldStr $operatorSymbol{$field}[$operator] \"$valueStr\"";
   
   # Write new filter string in filter textfield
   $winDB->tfFilterDB->Text($filterStr);
   
   # Load Whois Database with Filters
-  &applyFilters($filterStr);
+  &applyFilters();
   
   &winFilter_Terminate;
 
@@ -3493,12 +3504,11 @@ sub applyFilters
 #--------------------------#
 {
   # Local variables
-  my $filterStr = shift;
+  my $filterStr = $winDB->tfFilterDB->Text();
   my @filters;
   my $nbrDisplayedRow = 0;
   
   # Split filters
-  # Country equal "CA" OR ISP contains "Groupe Videotron" AND Date greater "2010-10-01"
   while ($filterStr =~ /((?: && | \|\| )?[^ ]+ [^ ]+ \"[^\"]+\")/) {
     my $filter = $1;
     push(@filters, $filter);
@@ -3545,15 +3555,15 @@ sub applyFilters
         my $rowHeight = $winDB->DBGrid->GetRowHeight($i);
         if ($rowHeight > 0) {
           my $f2filter = $winDB->DBGrid->GetCellText($i, $col2Filter);
-          if    ($operator eq $STR{'equal'}        and $f2filter eq $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); }
-          elsif ($operator eq $STR{'notEqual'}     and $f2filter ne $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); }
-          elsif ($operator eq $STR{'greater'}      and $f2filter gt $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); }
-          elsif ($operator eq $STR{'greaterEqual'} and $f2filter ge $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); }
-          elsif ($operator eq $STR{'lower'}        and $f2filter lt $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); }
-          elsif ($operator eq $STR{'lowerEqual'}   and $f2filter le $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); }
-          elsif ($operator eq $STR{'contains'}     and $f2filter =~ /$value/ ) { $winDB->DBGrid->SetRowHeight($i, 22); }
-          elsif ($operator eq $STR{'notContains'}  and $f2filter !~ /$value/ ) { $winDB->DBGrid->SetRowHeight($i, 22); }
-          elsif ($operator)                                                    { $winDB->DBGrid->SetRowHeight($i, 0); $nbrDisplayedRow--; }
+          if    ($operator eq '==' and $f2filter eq $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); }
+          elsif ($operator eq '!=' and $f2filter ne $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); }
+          elsif ($operator eq '>'  and $f2filter gt $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); }
+          elsif ($operator eq '>=' and $f2filter ge $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); }
+          elsif ($operator eq '<'  and $f2filter lt $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); }
+          elsif ($operator eq '<=' and $f2filter le $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); }
+          elsif ($operator eq '=~' and $f2filter =~ /$value/ ) { $winDB->DBGrid->SetRowHeight($i, 22); }
+          elsif ($operator eq '!~' and $f2filter !~ /$value/ ) { $winDB->DBGrid->SetRowHeight($i, 22); }
+          elsif ($operator)                                    { $winDB->DBGrid->SetRowHeight($i, 0); $nbrDisplayedRow--; }
         }
       }
     
@@ -3564,15 +3574,15 @@ sub applyFilters
         my $rowHeight = $winDB->DBGrid->GetRowHeight($i);
         if ($rowHeight == 0) {
           my $f2filter = $winDB->DBGrid->GetCellText($i, $col2Filter);
-          if    ($operator eq $STR{'equal'}        and $f2filter eq $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
-          elsif ($operator eq $STR{'notEqual'}     and $f2filter ne $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
-          elsif ($operator eq $STR{'greater'}      and $f2filter gt $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
-          elsif ($operator eq $STR{'greaterEqual'} and $f2filter ge $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
-          elsif ($operator eq $STR{'lower'}        and $f2filter lt $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
-          elsif ($operator eq $STR{'lowerEqual'}   and $f2filter le $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
-          elsif ($operator eq $STR{'contains'}     and $f2filter =~ /$value/ ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
-          elsif ($operator eq $STR{'notContains'}  and $f2filter !~ /$value/ ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
-          elsif ($operator)                                                    { $winDB->DBGrid->SetRowHeight($i, 0); }
+          if    ($operator eq '==' and $f2filter eq $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
+          elsif ($operator eq '!=' and $f2filter ne $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
+          elsif ($operator eq '>'  and $f2filter gt $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
+          elsif ($operator eq '>=' and $f2filter ge $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
+          elsif ($operator eq '<'  and $f2filter lt $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
+          elsif ($operator eq '<=' and $f2filter le $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
+          elsif ($operator eq '=~' and $f2filter =~ /$value/ ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
+          elsif ($operator eq '!~' and $f2filter !~ /$value/ ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
+          elsif ($operator)                                    { $winDB->DBGrid->SetRowHeight($i, 0); }
         }
       }
     
@@ -3581,14 +3591,14 @@ sub applyFilters
       # Test each row
       for (my $i = 1; $i < $winDB->DBGrid->GetRows(); $i++) {
         my $f2filter = $winDB->DBGrid->GetCellText($i, $col2Filter);
-        if    ($operator eq $STR{'equal'}        and $f2filter eq $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
-        elsif ($operator eq $STR{'notEqual'}     and $f2filter ne $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
-        elsif ($operator eq $STR{'greater'}      and $f2filter gt $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
-        elsif ($operator eq $STR{'greaterEqual'} and $f2filter ge $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
-        elsif ($operator eq $STR{'lower'}        and $f2filter lt $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
-        elsif ($operator eq $STR{'lowerEqual'}   and $f2filter le $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
-        elsif ($operator eq $STR{'contains'}     and $f2filter =~ /$value/ ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
-        elsif ($operator eq $STR{'notContains'}  and $f2filter !~ /$value/ ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
+          if    ($operator eq '==' and $f2filter eq $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
+          elsif ($operator eq '!=' and $f2filter ne $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
+          elsif ($operator eq '>'  and $f2filter gt $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
+          elsif ($operator eq '>=' and $f2filter ge $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
+          elsif ($operator eq '<'  and $f2filter lt $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
+          elsif ($operator eq '<=' and $f2filter le $value   ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
+          elsif ($operator eq '=~' and $f2filter =~ /$value/ ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
+          elsif ($operator eq '!~' and $f2filter !~ /$value/ ) { $winDB->DBGrid->SetRowHeight($i, 22); $nbrDisplayedRow++; }
         elsif ($operator)                                                    { $winDB->DBGrid->SetRowHeight($i, 0); } 
       }
     }
@@ -3597,7 +3607,6 @@ sub applyFilters
   $winDB->DBGrid->Refresh();
   my $nbrISP = $winDB->DBGrid->GetRows() - 1;
   $winDB->statusBar->Text(" $STR{'numberISP'}: $nbrISP | $STR{'numberISP'} $STR{'displayed'}: $nbrDisplayedRow");
-
 
 }  #--- End applyFilters
 
@@ -3667,8 +3676,8 @@ sub extractISPData
   open(FILE, $file) or Win32::GUI::MessageBox($win, $STR{'errReading'}.$!, $STR{'error'}, 0x40010);
   my @tab = <FILE>;
   close(FILE);
-  my ($d,$m,$y) = (&date((stat($file))[9]))[3,4,5];
-  my $dateFile = "$y-$m-$d";
+  my ($s,$min,$h,$d,$m,$y) = (&date((stat($file))[9]))[0,1,2,3,4,5];
+  my $dateFile             = "$y-$m-$d $h:$min:$s";
   
   # Split lines
   my @tabLines;
@@ -3731,9 +3740,9 @@ sub extractISPData
     # Process the first ISP (if all necessary details have been found)
     if ($tempNewISP{"type-$i"} and
         ((($tempNewISP{"type-$i"} eq 'IPv4' and ($tempNewISP{"range-$i"} or $tempNewISP{"cidr-$i"})) or # Range IPv4
-          ($tempNewISP{"type-$i"} eq 'IPv6' and $tempNewISP{"cidr-$i"})) and                        # Range IPv6
-         ($tempNewISP{"provider-$i"} or $tempNewISP{"descr-$i"}) and                                # Description
-         $tempNewISP{"country-$i"})) {                                                          # Country
+          ($tempNewISP{"type-$i"} eq 'IPv6' and $tempNewISP{"cidr-$i"})) and                            # Range IPv6
+         ($tempNewISP{"provider-$i"} or $tempNewISP{"descr-$i"})         and                            # Description
+         $tempNewISP{"country-$i"})) {                                                                  # Country
       
       # Post processing on IPv4 entry
       if ($tempNewISP{"type-$i"} eq 'IPv4') {
@@ -3896,7 +3905,7 @@ sub checkISP_IPv4
   while(my @row = $sth->fetchrow_array()) {
     my $ipStart = join '.', unpack 'C4', pack 'N', $row[0];
     my $ipEnd   = join '.', unpack 'C4', pack 'N', $row[1];
-    my $dateStr = &time2Date($row[4]);
+    my $dateStr = &time2DateLong($row[4]);
     $response .= "IPv4\t$ipStart\t$ipEnd\t$row[2]\t$row[3]\t$dateStr";
   }
   return($response);
@@ -3918,7 +3927,7 @@ sub checkISP_IPv6
   my $rv  = $sth->execute(uc($cidr));
   if ($rv < 0) { Win32::GUI::MessageBox($win, $STR{'errDB'}.$DBI::errstr, $STR{'error'}, 0x40010); }
   while(my @row = $sth->fetchrow_array()) {
-    my $dateStr = &time2Date($row[3]);
+    my $dateStr = &time2DateLong($row[3]);
     $response .= "IPv6\t$cidr\t$row[1]\t$row[2]\t$dateStr";
   }
   return($response);
@@ -4285,11 +4294,16 @@ sub DBGrid_Click
   my ($row, $column) = @_;
   $LISTNO = 1;
   if ($row == 0) {
-    $winDB->DBGrid->SetHeaderSort();
-    my $order = $winDB->DBGrid->GetSortAscending();
-    if    ($column > 1) { $winDB->DBGrid->SortCells($column, $order, \&sortLC); }
-    else                { $winDB->DBGrid->SortCells($column, $order, \&sortIP); }
-    $winDB->DBGrid->Refresh();
+    threads->create(sub {
+      $winDB->DBGrid->SetHeaderSort();
+      my $order = $winDB->DBGrid->GetSortAscending();
+      my $statusBarText = $winDB->statusBar->Text();
+      $winDB->statusBar->Text($STR{'sortProgress'}.'...');
+      if   ($column > 1) { $winDB->DBGrid->SortCells($column, $order, \&sortLC); }
+      else               { $winDB->DBGrid->SortCells($column, $order, \&sortIP); }
+      $winDB->DBGrid->Refresh();
+      $winDB->statusBar->Text($statusBarText);
+    });
   }
   return(1);
 
@@ -4376,8 +4390,10 @@ sub DBGrid_EndEdit
   my $range_e   = $winDB->DBGrid->GetCellText($row, 1);
   my $isp       = $winDB->DBGrid->GetCellText($row, 2);
   my $country   = $winDB->DBGrid->GetCellText($row, 3);
-  my ($d,$m,$y) = (&date(0))[3,4,5];
-  my $date      = "$y-$m-$d";
+  
+  # Get date and time
+  my ($s,$min,$h,$d,$m,$y) = (&date(0))[0,1,2,3,4,5];
+  my $date                 = "$y-$m-$d $h:$min:$s";
   
   # Check values
   if ($range_s and $range_e and $isp and $country and $date) {
@@ -5012,8 +5028,8 @@ sub addRangeWhoisDB
 #--------------------------#
 {
   # Local variables
-  my ($d,$m,$y) = (&date(0))[3,4,5];
-  my $date      = "$y-$m-$d";
+  my ($s,$min,$h,$d,$m,$y) = (&date(0))[0,1,2,3,4,5];
+  my $date                 = "$y-$m-$d $h:$min:$s";
   my @listRanges;
   my $i = 1;
   
@@ -5347,7 +5363,7 @@ sub btnWhois_Click
               if    ($checkDBOpt == 2 and $isp) { $answer = 7; }
               # ISP is already known, ask user what to do
               elsif ($checkDBOpt == 1 and $isp) {
-                my $dateStr  = &time2Date($time);
+                my $dateStr  = &time2DateLong($time);
                 my $ispStr   = "$STR{'ISP'}: $isp\n$STR{'cbFilterField4'}: $country\n$STR{'date'}: $dateStr";
                 $resCheckDB .= "$STR{'item'} \xAB $item \xBB $STR{'wasFoundWhoisDB'}:\n\n$ispStr\n\n";
               }
@@ -5545,7 +5561,9 @@ sub btnWhois_Click
         if ($nbrAdded)    { $msg .= "$STR{'numberISP'} $STR{'added'}: $nbrAdded\n"; }
         if ($nbrModified) { $msg .= "$STR{'numberISP'} $STR{'modified'}: $nbrModified\n"; }
         $msg .= "$STR{'totalNumberISP'}: $nbrISP\n";
+        $winDB->statusBar->Text(" $STR{'numberISP'}: ".$nbrISP);
         Win32::GUI::MessageBox($winDB, $msg, $STR{'winDB'}, 0x40040);
+        
       });
     }
   }
@@ -5858,13 +5876,13 @@ sub dnsRecords
   } else { return(''); }
   
   # Sort records
-  my @sdnsRecords = map { $_->[0] }
-                      sort { $a->[1] cmp $b->[1] }
-                        map { [ $_, (split(/\t/))[3] ] } @dnsRecords;
+  my @sdnsRecords = map  { $_->[0] }
+                    sort { $a->[1] cmp $b->[1] }
+                    map  { [ $_, (split(/\t/))[3] ] } @dnsRecords;
   @dnsRecords     = ();
-  @dnsRecords     = map { $_->[0] }
-                      sort { $b->[1] cmp $a->[1] }
-                        map { [ $_, (split(/\t/))[0] ] } @sdnsRecords;
+  @dnsRecords     = map  { $_->[0] }
+                    sort { $b->[1] cmp $a->[1] }
+                    map  { [ $_, (split(/\t/))[0] ] } @sdnsRecords;
 
   return(\@dnsRecords);
   

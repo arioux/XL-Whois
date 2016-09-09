@@ -7,7 +7,7 @@ Author 				: Alain Rioux (admin@le-tools.com)
 WebSite				: http://le-tools.com/XL-Whois.html
 GitHub				: https://github.com/arioux/XL-Whois
 Documentation	: http://le-tools.com/XL-WhoisDoc.html
-FossHub      	: http://code.fosshub.com/XL-Whois
+CodePlex			: https://xlwhois.codeplex.com/
 
 
 Development
@@ -44,12 +44,7 @@ following modules installed:
 To do
 -----
 
-- Whois Database Window
-	- Mixed sort for IPv4 and IPv6
-	- Edit filters function
-	- Add a full date option (grid)
 - Option to choose the ISP Name (auto parsing doesn't always give the best result)
-- Reduce size if possible (for packaging)
 
 
 Packaging
