@@ -11,11 +11,11 @@
 # CodePlex			: https://xlwhois.codeplex.com/
 # GitHub				: https://github.com/arioux/XL-Whois
 # Creation      : 2015-09-30
-# Modified      : 2016-09-09
-my $VERSION     = "4.1";
+# Modified      : 2017-03-09
+my $VERSION     = "4.1.1";
 # Author        : Alain Rioux (admin@le-tools.com)
 #
-# Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
+# Copyright (C) 2015-2017  Alain Rioux (le-tools.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,8 +30,6 @@ my $VERSION     = "4.1";
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-#------------------------------------------------------------------------------#
-
 #------------------------------------------------------------------------------#
 # Modules
 #------------------------------------------------------------------------------#
@@ -72,7 +70,6 @@ require "XL-WhoisLang.pl";
 #------------------------------------------------------------------------------#
 # Global variables
 #------------------------------------------------------------------------------#
-
 my $PROGDIR = $0;                                                              # Program path
 while (chop($PROGDIR) ne "\\") { }                                             # Dir only
 my $USERDIR;                                                                   # User path
@@ -108,7 +105,6 @@ my $TLDDB;                                                                     #
 #------------------------------------------------------------------------------#
 # Graphic elements
 #------------------------------------------------------------------------------#
-
 my ($winICO, $logoBmp, $logo128Bmp, $browseBmp, $openDirBmp, $fileOpenBmp, $fileNewBmp,
     $downloadBmp, $clipboardBmp, $whoisBmp, $databaseBmp, $config32Bmp, $config128Bmp,
     $helpBmp, $aboutBmp, $exportBmp, $importBmp, $extractBmp, $validdbBmp, $searchDB,
@@ -118,14 +114,12 @@ my ($winICO, $logoBmp, $logo128Bmp, $browseBmp, $openDirBmp, $fileOpenBmp, $file
 #------------------------------------------------------------------------------#
 # Strings
 #------------------------------------------------------------------------------#
-
 &loadDefaultStr(\%STR); # Load default language (en)
 if (-e $LANG_FILE and -T $LANG_FILE) { &loadStr(\%STR, $LANG_FILE); } # If language file, load translated strings
 
 #------------------------------------------------------------------------------#
 # Main window
 #------------------------------------------------------------------------------#
-
 my $screen    = Win32::GUI::GetDesktopWindow(); # Screen resolution
 my $scrnX     = Win32::GUI::Width($screen);
 my $scrnY     = Win32::GUI::Height($screen);
@@ -133,10 +127,8 @@ my $winWidth  = 503;
 my $winHeight = 347;
 my $winPosX   = ($scrnX - $winWidth)  / 2;
 my $winPosY   = ($scrnY - $winHeight) / 2;
-
 # Keyboard shorcut
 my $accel = new Win32::GUI::AcceleratorTable("Ctrl-A" => "selectAll");
-
 # Main Window
 my $win = Win32::GUI::Window->new( -name        => 'winMain'                           ,
                                    -text        => 'XL-Whois'                          ,
@@ -147,56 +139,39 @@ my $win = Win32::GUI::Window->new( -name        => 'winMain'                    
                                    -hasmaximize => 0                                   , 
                                    -accel       => $accel                              , );
 $win->SetIcon($winICO);
-
 # Fonts
 sub LOGPIXELSX() {88}
 sub getDPI       { return(Win32::GUI::DC->new()->GetDeviceCaps(LOGPIXELSX)); }
 my $DPI = &getDPI();
 my $fontGB;
 my $font10;
+my $font10b;
 my $font10u;
 my $font12;
 # Larger size (125% and 150%)
 if ($DPI >= 120) {
-  $fontGB = new Win32::GUI::Font( -name      => 'Arial',
-                                  -size      => 10     ,
-                                  -bold      => 1      ,
-                                  -underline => 1      , );
-  $font10  = new Win32::GUI::Font(-name      => 'Arial',
-                                  -size      =>  8     , );
-  $font10u = new Win32::GUI::Font(-name      => 'Arial',
-                                  -size      =>  8     ,
-                                  -bold      => 1      ,
-                                  -underline => 1      , );
-  $font12  = new Win32::GUI::Font(-name      => 'Arial',
-                                  -size      =>  9     , );
+  $fontGB = new Win32::GUI::Font( -name => 'Arial', -size => 10, -bold => 1, -underline => 1);
+  $font10  = new Win32::GUI::Font(-name => 'Arial', -size =>  8);
+  $font10b = new Win32::GUI::Font(-name => 'Arial', -size =>  8, -bold => 1);
+  $font10u = new Win32::GUI::Font(-name => 'Arial', -size =>  8, -bold => 1, -underline => 1);
+  $font12  = new Win32::GUI::Font(-name => 'Arial', -size =>  9);
 # Normal size
 } else {
-  $fontGB = new Win32::GUI::Font( -name      => 'Arial',
-                                  -size      => 12     ,
-                                  -bold      => 1      ,
-                                  -underline => 1      , );
-  $font10  = new Win32::GUI::Font(-name      => 'Arial',
-                                  -size      =>  10    , );
-  $font10u = new Win32::GUI::Font(-name      => 'Arial',
-                                  -size      =>  10    ,
-                                  -bold      => 1      ,
-                                  -underline => 1      , );
-  $font12  = new Win32::GUI::Font(-name      => 'Arial',
-                                  -size      =>  11    , );  
+  $fontGB = new Win32::GUI::Font( -name => 'Arial', -size => 12, -bold => 1, -underline => 1);
+  $font10  = new Win32::GUI::Font(-name => 'Arial', -size => 10);
+  $font10b = new Win32::GUI::Font(-name => 'Arial', -size => 10, -bold => 1);
+  $font10u = new Win32::GUI::Font(-name => 'Arial', -size => 10, -bold => 1, -underline => 1);
+  $font12  = new Win32::GUI::Font(-name => 'Arial', -size => 11);  
 }
-
 # Load Pointers
 my $loadImage = new Win32::API('user32', 'LoadImage', ['N','N','I','I','I','I'],'N');
 $HOURGLASS    = $loadImage->Call(0, 32514, 2, 0, 0, 0x8040);
 $ARROW        = $loadImage->Call(0, 32512, 2, 0, 0, 0x8040);
-
 # Taskbar
 $win->AddNotifyIcon(  -name        => "Tray"                  , 
                       -icon        => $winICO                 ,
                       -tip         => 'XL-Whois'              ,
                       -balloon     => 1                       , );
-
 # Title
 $win->AddLabel(       -name        => 'lblLogo'               ,
                       -size        => [499, 70]               ,
@@ -287,7 +262,6 @@ $win->AddTextfield(   -name        => 'tfComment'             ,
                       -size        => [300, 22]               ,
                       -pos         => [130,225]               ,
                       -disabled    => 1                       , );
-
 # Buttons
 $win->AddLabel(       -name        => 'lblFooter'             ,
                       -size        => [494, 80]               ,
@@ -336,7 +310,6 @@ $win->AddButton(      -name        => 'btnAbout'              ,
                       -bitmap      => $aboutBmp               ,
                       -background  => [250, 250, 250]         ,
                       -tip         => $STR{'btnAboutTip'}     , );
-
 # Load taskbar menu
 my $trayMenu = Win32::GUI::Menu->new(
  	"SysTray"                   => "SysTray",
@@ -362,7 +335,6 @@ my $trayMenu = Win32::GUI::Menu->new(
 #------------------------------------------------------------------------------#
 # Clipboard Window
 #------------------------------------------------------------------------------#
-
 my $winClip = Win32::GUI::Window->new( -name        => 'winClip'             ,
                                        -background  => [255, 255, 255]       ,
                                        #-parent      => $win                  ,
@@ -415,13 +387,11 @@ my $winConfig = Win32::GUI::DialogBox->new( -name        => 'winConfig'         
                                             -resizable   => 0                       ,
                                             -dialogui    => 1                       , );
 $winConfig->SetIcon($winICO);
-
 $winConfig->AddLabel(     -name         => 'lblLogo'             ,
                           -size         => [128,128]             ,
                           -pos          => [  0,  5]             ,
                           -bitmap       => $config128Bmp         ,
                           -background   => [255, 255, 255]       , );
-
 # Tabstrip
 $winConfig->AddTabStrip(            -name         => 'configTab'           ,
                                     -size         => [505,305]             ,
@@ -432,10 +402,7 @@ $winConfig->configTab->InsertItem(  -text         => $STR{'general'}       , );
 $winConfig->configTab->InsertItem(  -text         => $STR{'storage'}       , );
 $winConfig->configTab->InsertItem(  -text         => $STR{'database'}      , );
 $winConfig->configTab->SetItemSize(167,20);
-
-# General tab
-
-# Tool Section
+# General tab - Tool Section
 $winConfig->AddLabel(     -name        => 'lblToolShadowT'        ,
                           -size        => [ 80, 22]               ,
                           -pos         => [151, 36]               ,
@@ -467,8 +434,7 @@ $winConfig->AddCheckbox(  -name        => 'chAutoUpdate'          ,
                           -background  => [255, 255, 255]         ,
                           -font        => $font10                 ,
                           -checked     => 1                       , );
-
-# Whois section
+# General tab - Whois section
 $winConfig->AddLabel(     -name        => 'lblGeneralShadowT'     ,
                           -size        => [115, 22]               ,
                           -pos         => [151,136]               ,
@@ -514,8 +480,7 @@ $winConfig->AddLabel(     -name        => 'lblUserAgent'          ,
 $winConfig->AddTextfield( -name        => 'tfUserAgent'           ,
                           -size        => [350, 22]               ,
                           -pos         => [270,195]               , );
-
-# Parser section
+# General tab - Parser section
 $winConfig->AddLabel(     -name        => 'lblParserShadowT'      ,
                           -size        => [ 80, 22]               ,
                           -pos         => [151,231]               ,
@@ -554,10 +519,7 @@ $winConfig->AddCheckbox(  -name        => 'chDomainName'          ,
                           -background  => [255, 255, 255]         ,
                           -text        => 'Domain Name'           ,
                           -font        => $font10                 , );
-
-# Storage tab
-
-# Report section
+# Storage tab - Report section
 $winConfig->AddLabel(       -name        => 'lblReportShadowT'      ,
                             -size        => [260, 22]               ,
                             -pos         => [151, 36]               ,
@@ -615,8 +577,7 @@ $winConfig->AddCheckbox(    -name        => 'chAutoViewDir'         ,
                             -text        => $STR{'chAutoViewDir'}   ,
                             -font        => $font10                 ,
                             -visible     => 0                       , );
-
-# Logging Database section
+# Storage tab - Logging Database section
 $winConfig->AddLabel(       -name        => 'lblLogDbFileShadowT'   ,
                             -size        => [260, 22]               ,
                             -pos         => [151,134]               ,
@@ -663,8 +624,7 @@ $winConfig->AddButton(      -name        => 'btnLogDbView'          ,
                             -bitmap      => $database16             ,
                             -tip         => $STR{'btnLogDbViewTip'} ,
                             -visible     => 0                       , );
-
-# Whois Database Section
+# Storage tab - Whois Database Section
 $winConfig->AddLabel(       -name        => 'lblDbFileShadowT'      ,
                             -size        => [260, 22]               ,
                             -pos         => [151,204]               ,
@@ -710,10 +670,7 @@ $winConfig->AddButton(      -name        => 'btnWhoisDbView'        ,
                             -bitmap      => $database16             ,
                             -tip         => $STR{'btnWhoisDbViewTip'} ,
                             -visible     => 0                       , );
-
-# Database tab
-
-# TLD Database section
+# Database tab - TLD Database section
 $winConfig->AddLabel(       -name        => 'lblTLDDBShadowT'       ,
                             -size        => [260, 22]               ,
                             -pos         => [151, 36]               ,
@@ -753,8 +710,7 @@ $winConfig->AddButton(      -name        => 'btnTLDDBUpt'           ,
                             -bitmap      => $downloadBmp            ,
                             -tip         => $STR{'btnTLDDBUptTip'}  ,
                             -visible     => 0                       , );
-
-# Whois Server Database section
+# Database tab - Whois Server Database section
 $winConfig->AddLabel(       -name        => 'lblWSDBShadowT'        ,
                             -size        => [260, 22]               ,
                             -pos         => [151,104]               ,
@@ -794,8 +750,7 @@ $winConfig->AddButton(      -name        => 'btnWSDBUpt'            ,
                             -bitmap      => $downloadBmp            ,
                             -tip         => $STR{'btnWSDBUptTip'}   ,
                             -visible     => 0                       , );
-
-# IPv4 Database section
+# Database tab - IPv4 Database section
 $winConfig->AddLabel(       -name        => 'lblIPv4ShadowT'        ,
                             -size        => [260, 22]               ,
                             -pos         => [151,169]               ,
@@ -835,8 +790,7 @@ $winConfig->AddButton(      -name        => 'btnIPv4DBUpt'          ,
                             -bitmap      => $downloadBmp            ,
                             -tip         => $STR{'btnIPv4DBUptTip'} ,
                             -visible     => 0                       , );
-
-# IPv6 Database section
+# Database tab - IPv6 Database section
 $winConfig->AddLabel(       -name        => 'lblIPv6ShadowT'        ,
                             -size        => [260, 22]               ,
                             -pos         => [151,234]               ,
@@ -880,7 +834,6 @@ $winConfig->AddButton(      -name        => 'btnIPv6DBUpt'          ,
 #------------------------------------------------------------------------------#
 # Whois Database Window
 #------------------------------------------------------------------------------#
-
 my $winDBw = 750;
 my $winDBh = 500;
 my $winDB = Win32::GUI::Window->new(  -name        => 'winDB'               ,
@@ -987,10 +940,8 @@ $winDB->AddGrid(      -name         => 'DBGrid'               ,
                       -fixedcolumns => 0                      ,
                       -editable     => 1                      , );
 $winDB->DBGrid->EnableRowHide();
-
 # Status bar
 $winDB->AddStatusBar( -name         => 'statusBar'            , );
-
 # Popup menu for grid
 my $GridPopupMenu = new Win32::GUI::Menu(
   "GridMenu"                => "GridMenu"      ,
@@ -1005,7 +956,6 @@ my $GridPopupMenu = new Win32::GUI::Menu(
 #------------------------------------------------------------------------------#
 # Add ISP Ranges Window
 #------------------------------------------------------------------------------#
-
 my $winAddRanges = Win32::GUI::Window->new( -name        => 'winAddRanges'            ,
                                             -background  => [255, 255, 255]           ,
                                             -parent      => $winDB                    ,
@@ -1035,7 +985,6 @@ $winAddRanges->AddGrid (        -name         => 'GridISPRanges'          ,
                                 -fixedcolumns => 0                        ,
                                 -editable     => 0                        , );
 $winAddRanges->GridISPRanges->SetListMode();
-
 # Buttons
 $winAddRanges->AddButton(       -name         => 'btnAddRCancel'          ,
                                 -size         => [100, 30]                ,
@@ -1052,7 +1001,6 @@ $winAddRanges->AddButton(       -name         => 'btnAddRSelected'        ,
 #------------------------------------------------------------------------------#
 # Network Whois Data Window
 #------------------------------------------------------------------------------#
-
 my $winNWD = Win32::GUI::Window->new(  -name        => 'winNWD'              ,
                                        -background  => [255, 255, 255]       ,
                                        -parent      => $winDB                ,
@@ -1096,7 +1044,6 @@ my $winFilter  = Win32::GUI::DialogBox->new(-name        => 'winFilter'         
                                             -resizable   => 0                         ,
                                             -dialogui    => 1                         , );
 $winFilter->SetIcon($winICO);
-
 # Add filter operator
 $winFilter->AddLabel(     -name         => 'lblAddFilterOp'       ,
                           -size         => [120, 22]              ,
@@ -1261,7 +1208,6 @@ $winAWD->AddButton(       -name         => 'btnAWDNext'             ,
 #------------------------------------------------------------------------------#
 # Logging Database Window
 #------------------------------------------------------------------------------#
-
 my $winLogDB = Win32::GUI::Window->new( -name        => 'winLogDB'            ,
                                         -background  => [255, 255, 255]       ,
                                         -parent      => $winConfig            ,
@@ -1273,7 +1219,6 @@ my $winLogDB = Win32::GUI::Window->new( -name        => 'winLogDB'            ,
                                         -hasminimize => 1                     ,
                                         -resizable   => 1                     , );
 $winLogDB->SetIcon($winICO);
-
 # Grid
 $winLogDB->AddGrid( -name         => 'LogDBGrid'              ,
                     -size         => [$winDBw-14, $winDBh-36],
@@ -1282,7 +1227,6 @@ $winLogDB->AddGrid( -name         => 'LogDBGrid'              ,
                     -columns      => 4                        ,
                     -fixedrows    => 1                        ,
                     -fixedcolumns => 0                        , );
-
 # Popup menu fro grid
 my $LogDBGridPopupMenu = new Win32::GUI::Menu("logDBGridMenu"             => "logDBGridMenu"      ,
                                               "> $STR{'gridSelectAll'}"   => "logDBGridSelectAll" ,
@@ -1309,7 +1253,6 @@ my $winPb  = Win32::GUI::DialogBox->new(-name        => 'winPb'                 
                                         -resizable   => 0                         ,
                                         -dialogui    => 1                         , );
 $winPb->SetIcon($winICO);
-
 $winPb->AddLabel(       -name        => 'lblLogo2'       ,
                         -size        => [128,128]        ,
                         -pos         => [  0,  5]        ,
@@ -1342,26 +1285,18 @@ $winPb->AddButton(      -name        => 'btnCancel'      ,
 #------------------------------------------------------------------------------#
 # Starting program
 #------------------------------------------------------------------------------#
-
 if (-T $CONFIG_FILE) {
   &loadConfig(\%CONFIG);
-
-    # Check update for tool and databases ?
+  # Check update for tool and databases ?
   if ($CONFIG{'TOOL_AUTO_UPDATE'}    or $CONFIG{'TLD_DB_AUTO_UPDATE'} or $CONFIG{'WS_DB_AUTO_UPDATE'} or
       $CONFIG{'IPv4_DB_AUTO_UPDATE'} or $CONFIG{'IPv6_DB_AUTO_UPDATE'}) {
     $THR_UPDATE = threads->create(sub { &updateAll(); });
   }
-
   &isWhoisReady(0);
-  
-} else {
-  # Create the Configuration Wizard Window
+} else { # Configuration Wizard Window
   my $refWinCW = &createCW();
-  
-  # First start of the tool, Load configuration wizard
   $THR_UPDATE = threads->create(sub { &firstStart($refWinCW); });
 }
-
 $START = 1;
 if (!$CONFIG{'START_MINIMIZED'}) { $win->Show(); }
 Win32::GUI::Dialog();
@@ -1401,8 +1336,6 @@ sub DWTrayMenu_Click
     $win->chDomain->Checked(0);
     &saveConfig(\%CONFIG);
   }
-  
-  # Ready ?
   &isWhoisReady(0);
 
 }  #--- End DWTrayMenu_Click
@@ -1423,8 +1356,6 @@ sub NWTrayMenu_Click
     $win->chNetwork->Checked(0);
     &saveConfig(\%CONFIG);
   }
-  
-  # Ready ?
   &isWhoisReady(0);
 
 }  #--- End NWTrayMenu_Click
@@ -1445,19 +1376,13 @@ sub DRTrayMenu_Click
     $win->chDNS->Checked(0);
     &saveConfig(\%CONFIG);
   }
-  
-  # Ready ?
   &isWhoisReady(0);
 
 }  #--- End DRTrayMenu_Click
 
 #--------------------------#
-sub Tray_DblClick
+sub Tray_DblClick { $win->Show(1); }
 #--------------------------#
-{
-  $win->Show(1);
-
-}  #--- End Tray_DblClick
 
 #--------------------------#
 sub Tray_RightClick
@@ -1524,29 +1449,19 @@ sub winClip_Resize
 sub tfClip_Change
 #--------------------------#
 {
-  # Local variables
   my $tfClip = $winClip->tfClip->Text();
-
   if ($tfClip)  { $winClip->btnClipEdit->Enable();  }
   else          { $winClip->btnClipEdit->Disable(); }
 
 }  #--- End tfClip_Change
 
 #--------------------------#
-sub tfClip_GotFocus
+sub tfClip_GotFocus { $LISTNO = 3; }
 #--------------------------#
-{
-  $LISTNO = 3;
-
-}  #--- End tfClip_GotFocus
 
 #--------------------------#
-sub btnClipOk_Click
+sub btnClipOk_Click { return(-1); }
 #--------------------------#
-{
-  return(-1);
-
-}  #--- End btnClipOk_Click
 
 #--------------------------#
 sub btnClipEdit_Click
@@ -1565,7 +1480,6 @@ sub btnClipParse_Click
 {
   # Local variables
   my $text = $winClip->tfClip->Text();
-  
   # Extract Items from Clipboard
   my %itemsIndex;
   my %itemsType;
@@ -1573,18 +1487,13 @@ sub btnClipParse_Click
   if (!$nbrItems) {
     Win32::GUI::MessageBox($win, $STR{'errNoValidData'}, $STR{'error'}, 0x40010);
     return(0);
-    
   # Whois Request
   } else {
     my $parsedItems;
-    foreach my $item (sort { $itemsIndex{$a} <=> $itemsIndex{$b} } keys(%itemsIndex)) {
-      $parsedItems .= "$item\r\n";
-    }
-    
+    foreach my $item (sort { $itemsIndex{$a} <=> $itemsIndex{$b} } keys(%itemsIndex)) { $parsedItems .= "$item\r\n"; }
     $winClip->tfClip->Text($parsedItems);
     Win32::Clipboard::Set($parsedItems);
   }
-  
   return(1);
 
 }  #--- End btnClipParse_Click
@@ -1603,8 +1512,6 @@ sub chDomain_Click
     $trayMenu->{'domainWhois'}->Checked(0);
     &saveConfig(\%CONFIG);
   }
-  
-  # Ready ?
   &isWhoisReady(0);
 
 }  #--- End chDomain_Click
@@ -1623,8 +1530,6 @@ sub chNetwork_Click
     $trayMenu->{'networkWhois'}->Checked(0);
     &saveConfig(\%CONFIG);
   }
-  
-  # Ready ?
   &isWhoisReady(0);
 
 }  #--- End chNetwork_Click
@@ -1643,8 +1548,6 @@ sub chDNS_Click
     $trayMenu->{'dnsRecords'}->Checked(0);
     &saveConfig(\%CONFIG);
   }
-  
-  # Ready ?
   &isWhoisReady(0);
 
 }  #--- End chDNS_Click
@@ -1656,7 +1559,6 @@ sub cbCheckWhoisDB_Change
   # Local variables
   my $field = $win->cbCheckWhoisDB->GetCurSel();
   # Possible values for field: 0 = Don't check, 1 = If present, ask, 2 = If present, ignore, 3 = Check after
-  
   $CONFIG{'CHECK_WHOIS_DB'} = $field;
   &saveConfig(\%CONFIG);
 
@@ -1695,13 +1597,10 @@ sub loadLoggingDB
 {
   # Local variables
   my $logDbFile = $winConfig->tfLogDbFile->Text();
-  
   if (-f $logDbFile) {
-    # Connect to DB
     my $dsn = "DBI:SQLite:dbname=$logDbFile";
     my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })
               or Win32::GUI::MessageBox($win, $STR{'errConnectingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
-              
     # Check if LOGGING_DB table exists
     my $sth;
     eval { $sth = $dbh->table_info(undef, undef, '%', 'TABLE'); };
@@ -1709,13 +1608,11 @@ sub loadLoggingDB
       Win32::GUI::MessageBox($win, $STR{'errConnectingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
       return(0);
     }
-    
     # If table LOGGING_DB exists, than load data
     my @info = $sth->fetchrow_array;
     $sth->finish();
     if ($info[2] eq 'LOGGING_DB') {
       my $all = $dbh->selectall_arrayref("SELECT * FROM LOGGING_DB ORDER BY date DESC");
-    
       # Database: table = LOGGING_DB, Fields = date, request, details, comment
       # Feed the grid
       my $i = 0;
@@ -1737,13 +1634,11 @@ sub loadLoggingDB
         $winLogDB->LogDBGrid->SetCellEditable($i, 3, 1);
         $i++;
       }
-      
       # Refresh grid
       $winLogDB->LogDBGrid->AutoSizeColumns();
       $winLogDB->LogDBGrid->ExpandColumnsToFit();
       $winLogDB->LogDBGrid->ScrollPos(1,0);
       $winLogDB->LogDBGrid->SetListMode();
-      
       $dbh->disconnect();
       return(1);
     } else { Win32::GUI::MessageBox($win, $STR{'errTableLoggingDB'}, $STR{'error'}, 0x40010); return(0); }
@@ -1813,7 +1708,6 @@ sub logDBlineDelete_Click
   my $nbrEntries  = $winLogDB->LogDBGrid->GetRows();
   my $logDbFile   = $winConfig->tfLogDbFile->Text();
   my @Entries2del;
-  
   # Select data to delete
   my $lastSelectedRow; 
   if ($coord[2]) { $lastSelectedRow = $coord[2]; }
@@ -1824,7 +1718,6 @@ sub logDBlineDelete_Click
       push(@Entries2del, $dateEntry);
     }
   }
-
   $THR = threads->create(sub {
     # Thread 'cancellation' signal handler
     $SIG{'KILL'} = sub {
@@ -1834,7 +1727,6 @@ sub logDBlineDelete_Click
       $winLogDB->ChangeCursor($ARROW);
       threads->exit();
     };
-    
     # Show progress window
     my $nbrEntries2del = @Entries2del;
     $winPb->lblPbCurr->Text($STR{'deletingEntries'});
@@ -1846,12 +1738,10 @@ sub logDBlineDelete_Click
     $winPb->Show();
     $winLogDB->Disable();
     $winLogDB->ChangeCursor($HOURGLASS);
-
     # Connect to DB
     my $dsn = "DBI:SQLite:dbname=$logDbFile";
     my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })
               or Win32::GUI::MessageBox($win, $STR{'errCreatingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
-              
     # Loop each entry and delete
     my $j = 0;
     foreach my $dateEntry2del (@Entries2del) {
@@ -1886,7 +1776,6 @@ sub logDBlineDelete_Click
     $dbh->disconnect();
     $winLogDB->LogDBGrid->Refresh();
   });
-
   return(1);
   
 }  #--- End logDBlineDelete_Click
@@ -1901,14 +1790,12 @@ sub LogDBGrid_EndEdit
   my $date           = $winLogDB->LogDBGrid->GetCellText($row, 0);
   my $comment        = $winLogDB->LogDBGrid->GetCellText($row, 3);
   if (!$comment) { $comment = 'NULL'; }
-  
   # Add or modify comment in Logging Database
   if (-f $logDbFile) {
     # Connect to DB
     my $dsn = "DBI:SQLite:dbname=$logDbFile";
     my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })
               or Win32::GUI::MessageBox($win, $STR{'errCreatingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
-    
     # Database: table = LOGGING_DB, Fields = date, request, details, comment
     my $sth = $dbh->prepare("UPDATE LOGGING_DB SET comment = ? WHERE ? == date");
     my $rv  = $sth->execute($comment, $date);
@@ -1919,7 +1806,6 @@ sub LogDBGrid_EndEdit
     }
     $dbh->disconnect();
   }
-
   return(1);
 
 }  #--- End LogDBGrid_EndEdit
@@ -1936,14 +1822,12 @@ sub importLogDB_Click
                                             -file             => 'Logging_db.txt'     ,
                                             -defaultextension => 'txt'                ,
                                             -explorer         => 1                    , );
-  
   # Selected file
   if ($logFile and -T $logFile) {
     # Validate content
     open(FILE, $logFile) or Win32::GUI::MessageBox($win, $STR{'errReading'}.$!, $STR{'error'}, 0x40010);
     my @logging = <FILE>;
     close(FILE);
-    
     shift(@logging); # Remove headers
     my $nbrEntries = @logging;
     if ($nbrEntries > 1 and $logging[0]) { # At least one entry
@@ -1955,7 +1839,6 @@ sub importLogDB_Click
       } else { Win32::GUI::MessageBox($winLogDB, $STR{'errNoValidFile'}, $STR{'error'}, 0x40010); }
     } else { Win32::GUI::MessageBox($winLogDB, $STR{'errFileEmpty'}, $STR{'error'}, 0x40010); }
   } else { Win32::GUI::MessageBox($winLogDB, $STR{'selectValidFile'}, $STR{'error'}, 0x40010); }
-
   return(1);
 
 }  #--- End importLogDB_Click
@@ -1967,7 +1850,6 @@ sub importLoggingDB
   # Local variables
   my ($refLogging, $nbrEntries) = @_;
   my $dbLogFile = $winConfig->tfLogDbFile->Text();
-  
   # Cancel button
   $SIG{'KILL'} = sub {
     # Sort grid
@@ -1981,7 +1863,6 @@ sub importLoggingDB
     $winLogDB->ChangeCursor($ARROW);
     threads->exit();
   };
-  
   # Turn on progress bar
   $winPb->Center($winDB);
   $winPb->Show();
@@ -1989,7 +1870,6 @@ sub importLoggingDB
   $winPb->lblCount->Text('');
   $winLogDB->Disable();
   $winLogDB->ChangeCursor($HOURGLASS);
-  
   # Update DB
   # Database: table = LOGGING_DB, Fields = date, request, details, comment
   $winPb->lblPbCurr->Text($STR{'importingLoggingData'});
@@ -2021,14 +1901,12 @@ sub importLoggingDB
       } else { Win32::GUI::MessageBox($win, $STR{'errNewLine'}, $STR{'error'}, 0x40010); }
     }
   }
-  
   # Refresh grid
   $winLogDB->LogDBGrid->AutoSizeColumns();
   $winLogDB->LogDBGrid->ExpandColumnsToFit();
   $winLogDB->LogDBGrid->ScrollPos(1,0);
   $winLogDB->LogDBGrid->SortCells(0, 0, \&sortLC);
   $winLogDB->LogDBGrid->Refresh();
-  
   # Turn off progress bar
   $winPb->lblPbCurr->Text('');
   $winPb->lblCount->Text('');
@@ -2044,7 +1922,6 @@ sub exportLogDB_Click
 {
   # Local variables
   my $logDbFile = $winConfig->tfLogDbFile->Text();
-  
   # Show SaveFileWindow
   my $file = Win32::GUI::GetSaveFileName( -owner            => $winLogDB                  ,
                                           -title            => $STR{'btnExportDBTip'}.':' ,
@@ -2060,17 +1937,14 @@ sub exportLogDB_Click
         $winLogDB->ChangeCursor($ARROW);
         threads->exit();
       };
-
       # Connect to DB
       my $dsn = "DBI:SQLite:dbname=$logDbFile";
       my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })
                 or Win32::GUI::MessageBox($win, $STR{'errCreatingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
-
       # Database: table = LOGGING_DB, Fields = date, request, details, comment
       my $all = $dbh->selectall_arrayref("SELECT * FROM LOGGING_DB ORDER BY date ASC");
       my $nbrEntries = scalar(@$all);
       $winLogDB->ChangeCursor($HOURGLASS);
-      
       # Show progress window
       $winPb->lblPbCurr->Text($STR{'exportLoggingDB'});
       $winPb->lblCount->Text("0 / $nbrEntries");
@@ -2081,11 +1955,9 @@ sub exportLogDB_Click
       $winPb->Show();
       $winLogDB->Disable();
       $winLogDB->ChangeCursor($HOURGLASS);
-      
-       # Export DB
+      # Export DB
       &exportLoggingDB($file, $all, $nbrEntries);
       $dbh->disconnect();
-      
       # Message
       $winLogDB->ChangeCursor($ARROW);
       &winPb_Terminate;
@@ -2093,7 +1965,6 @@ sub exportLogDB_Click
       $winLogDB->BringWindowToTop();
     });
   }
-  
   return(1);
 
 }  #--- End exportLogDB_Click
@@ -2105,7 +1976,6 @@ sub exportLoggingDB
   # Local variables
   my ($file, $refData, $nbrEntries) = @_;
   my $i = 0;
-
   # Open and write data to file
   open my $db_export, '>', $file or Win32::GUI::MessageBox($win, $STR{'errWriting'}.$!, $STR{'error'}, 0x40010);
   print $db_export "$STR{'date'}\t$STR{'request'}\t$STR{'details'}\t$STR{'comment'}\n";
@@ -2122,12 +1992,8 @@ sub exportLoggingDB
 }  #--- End exportLoggingDB
 
 #--------------------------#
-sub lblNotReady_Click
+sub lblNotReady_Click { &isWhoisReady(1); }
 #--------------------------#
-{
-  &isWhoisReady(1);
-
-}  #--- End lblNotReady_Click
 
 #--------------------------#
 sub isWhoisReady
@@ -2136,43 +2002,25 @@ sub isWhoisReady
   # Local variables
   my $confirm = shift;
   my $nextStep;
-  
   # Parser
   if (!$winConfig->chIPv4->Checked() and !$winConfig->chIPv6->Checked() and !$winConfig->chHostname->Checked() and !$winConfig->chDomainName->Checked()) {
     $nextStep = $STR{'readyParserOpt'};
   }
-  
   # Options
-  if (!$win->chDomain->Checked() and !$win->chNetwork->Checked() and !$win->chDNS->Checked()) {
-    $nextStep = $STR{'readySelWhoisOpt'};
-  }
-  
+  if (!$win->chDomain->Checked() and !$win->chNetwork->Checked() and !$win->chDNS->Checked()) { $nextStep = $STR{'readySelWhoisOpt'}; }
   # Folder for report
   my $saveDir = $winConfig->tfReportDir->Text();
-  if (!$saveDir or !-d $saveDir) {
-    $nextStep = $STR{'btnReportDirTip'};
-  }
-  
+  if (!$saveDir or !-d $saveDir) { $nextStep = $STR{'btnReportDirTip'}; }
   # Whois Database location
-  if (!$CONFIG{'WHOIS_DB_FILE'} or !-f $CONFIG{'WHOIS_DB_FILE'}) {
-    $nextStep = $STR{'readySelWhoisDB'};
-  }
-  
+  if (!$CONFIG{'WHOIS_DB_FILE'} or !-f $CONFIG{'WHOIS_DB_FILE'}) { $nextStep = $STR{'readySelWhoisDB'}; }
   # Logging Database location (optional)
   if (($CONFIG{'CHECK_LOGGING_DB'} or $winConfig->chLogActivate->Checked()) and (!$CONFIG{'LOGGING_DB_FILE'} or !-f $CONFIG{'LOGGING_DB_FILE'})) {
     $nextStep = $STR{'readySelLoggingDB'};
   }
-  
   # TLD Database location
-  if (!$CONFIG{'TLD_DB_FILE'} or !-f $CONFIG{'TLD_DB_FILE'}) {
-    $nextStep = $STR{'readySelTLDDB'};
-  }
-
+  if (!$CONFIG{'TLD_DB_FILE'} or !-f $CONFIG{'TLD_DB_FILE'}) { $nextStep = $STR{'readySelTLDDB'}; }
   # Whois Server Database location
-  if (!$CONFIG{'WS_DB_FILE'} or !-f $CONFIG{'WS_DB_FILE'}) {
-    $nextStep = $STR{'readySelWSDB'};
-  }
-  
+  if (!$CONFIG{'WS_DB_FILE'} or !-f $CONFIG{'WS_DB_FILE'}) { $nextStep = $STR{'readySelWSDB'}; }
   # Return an error message or enable the button
   if ($nextStep) {
     $win->btnWhois->Disable();
@@ -2194,15 +2042,13 @@ sub extractRequestItems
   # Local variables
   my ($refItemsIndex, $refItemsType)  = @_;
   # $refItemsIndex: hash contains item original position in list
-  # $refItemsType: hash contains item value type: IPv4, Hostname, Domain, IPv6
+  # $refItemsType:  hash contains item value type: IPv4, Hostname, Domain, IPv6
   my $nbrItems = 0;
   my @content  = split(/\r\n/, Win32::Clipboard::GetText());
-  
   # Load TLD Database
   if (!$TLDDB) {
     $TLDDB = Domain::PublicSuffix->new({ 'data_file' => $CONFIG{'TLD_DB_FILE'} }) or Win32::GUI::MessageBox($win, $STR{'errLoadingDB'}, $STR{'error'},0x40010);
   }
-
   # List items
   foreach my $item (@content) {
     while ($item =~ /(?:[^0-9]|^)(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?:[^0-9\.]|$)/ or
@@ -2214,10 +2060,9 @@ sub extractRequestItems
       my $hostnameFound = 0;
       my $domainFound   = 0;
       my $ipv6Found     = 0;
-      
       # IPv4
-      if    ($item =~ /(?:[^0-9]|^)((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))(?:[^0-9\.]|$)/
-             and $winConfig->chIPv4->Checked()) {
+      if ($item =~ /(?:[^0-9]|^)((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))(?:[^0-9\.]|$)/ and
+          $winConfig->chIPv4->Checked()) {
         $nbrItems++;
         $el = $1;
         $$refItemsIndex{$el} = $nbrItems;
@@ -2253,7 +2098,6 @@ sub extractRequestItems
           $domainFound = 1;
         }
       }
-      
       # IPv6
       if ($item =~ /($IPv6_re)/ and $winConfig->chIPv6->Checked()) {
         $el = $1;
@@ -2265,23 +2109,17 @@ sub extractRequestItems
           $ipv6Found = 0;
         }
       }
-      
       # Nothing found
       if (!$ipv4Found and !$hostnameFound and !$domainFound and !$ipv6Found) { last; }
     }
   }
-
   return($nbrItems);
   
 }  #--- End extractRequestItems
 
 #--------------------------#
-sub btnWinDatabase_Click
+sub btnWinDatabase_Click { &btnWhoisDbView_Click; }
 #--------------------------#
-{
-  &btnWhoisDbView_Click;
-
-}  #--- End btnWinDatabase_Click
 
 #--------------------------#
 sub winDB_Resize
@@ -2312,12 +2150,9 @@ sub loadWhoisDB
 {
   # Local variables
   my $whoisDB = $winConfig->tfDbFile->Text();
-  
   if (-f $whoisDB) {
-    # Local variables
     my $nbrISP = 0;
     my $i      = 0;
-    
     # Connect to DB
     my $dsn = "DBI:SQLite:dbname=$whoisDB";
     my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 }) or Win32::GUI::MessageBox($win, $STR{'errConnectingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
@@ -2328,28 +2163,22 @@ sub loadWhoisDB
       Win32::GUI::MessageBox($win, $STR{'errConnectingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
       return(0);
     }
-    
     # If table WHOIS_DB exists, than load data
     my $refInfo = $sth->fetchall_arrayref;
     $sth->finish();
     if ($$refInfo[0][2] eq 'WHOIS_DB') {
       my $all = $dbh->selectall_arrayref("SELECT * FROM WHOIS_DB ORDER BY range_s ASC");
-      
       # Fields: 0 = ip start, 1 = ip end, 2 = ISP name, 3 = country, 4 = date
       $nbrISP = scalar(@$all);
       $winDB->statusBar->Text(" $STR{'numberISP'}: ".$nbrISP);
       $winDB->DBGrid->SetRows($nbrISP + 1);
-      
-      # Feed the grid
-      
-      # Header
+      # Feed the grid - Header
       $winDB->DBGrid->SetCellText($i, 0, $STR{'cbFilterField1'});
       $winDB->DBGrid->SetCellText($i, 1, $STR{'cbFilterField2'});
       $winDB->DBGrid->SetCellText($i, 2, $STR{'cbFilterField3'});
       $winDB->DBGrid->SetCellText($i, 3, $STR{'cbFilterField4'});
       $winDB->DBGrid->SetCellText($i, 4, $STR{'date'});
       $i++;
-      
       # Feed data
       foreach my $row (@$all) {
         my (@values) = @$row;
@@ -2376,21 +2205,17 @@ sub loadWhoisDB
         }
         $i++;
       }
-      
     } else {
       Win32::GUI::MessageBox($win, $STR{'errTableWhoisDB'}, $STR{'error'}, 0x40010);
       $dbh->disconnect();
       return(0);
     }
-    
     # If table WHOIS_DB_IPV6 exists, than load data
     if ($$refInfo[1] and $$refInfo[1][2] eq 'WHOIS_DB_6') {
       my $all = $dbh->selectall_arrayref("SELECT * FROM WHOIS_DB_6 ORDER BY ipv6_range ASC");
-      
       $nbrISP += scalar(@$all);
       $winDB->statusBar->Text(" $STR{'numberISP'}: ".$nbrISP);
       $winDB->DBGrid->SetRows($nbrISP + 1);
-      
       # Create header if it doesn't exist
       if ($i == 0) {
         # Header
@@ -2401,7 +2226,6 @@ sub loadWhoisDB
         $winDB->DBGrid->SetCellText($i, 4, $STR{'date'});
         $i++;
       }
-      
       # Feed data
       foreach my $row (@$all) {
         my (@values) = @$row;
@@ -2430,10 +2254,8 @@ sub loadWhoisDB
         }
         $i++;
       }
-      
     # If table WHOIS_DB_6 does not exist, create the table
     } else { &createWhoisDB_IPV6(\$dbh); }
-    
     # Refresh grid
     $winDB->DBGrid->AutoSizeColumns();
     $winDB->DBGrid->ExpandColumnsToFit();
@@ -2441,7 +2263,6 @@ sub loadWhoisDB
     $winDB->DBGrid->ScrollPos(1,0);
     $winDB->DBGrid->SortCells(0, 1, \&sortIP);
     $winDB->DBGrid->Refresh();
-  
     $dbh->disconnect();
     return(1);
   } else { return(0); } # No valid WhoisDB file
@@ -2458,14 +2279,12 @@ sub btnImportDB_Click
                                                 -defaultfilter => 0                       ,
                                                 -filemustexist => 1                       ,
                                                 -explorer      => 1                       , );
-
   # Selected file
   if ($importFile and -T $importFile) {
     # Validate content
     open(FILE, $importFile) or Win32::GUI::MessageBox($win, $STR{'errReading'}.$!, $STR{'error'}, 0x40010);
     my @newISP = <FILE>;
     close(FILE);
-    
     my $nbrISP = @newISP;
     if ($nbrISP > 0 and $newISP[0]) { # At least one item
       my @fields = split(/\t/, $newISP[0]);
@@ -2488,7 +2307,6 @@ sub importWhoisDB
   # Local variables
   my ($refImportedISPs, $nbrISP) = @_;
   my @newISPs;
-  
   # Cancel button
   $SIG{'KILL'} = sub {
     # Sort grid
@@ -2505,7 +2323,6 @@ sub importWhoisDB
     $winDB->ChangeCursor($ARROW);
     threads->exit();
   };
-  
   # Turn on progress bar
   $winPb->Center($winDB);
   $winPb->Show();
@@ -2513,7 +2330,6 @@ sub importWhoisDB
   $winPb->lblCount->Text('');
   $winDB->Disable();
   $winDB->ChangeCursor($HOURGLASS);
-  
   # Convert IP range
   # To Fields: 0 = Type (IPv4 or IPv6), 1 and 2 = range or cidr, 3 = ISP name, 4 = country, 5 = date
   while (my $isp = shift @{$refImportedISPs}) {
@@ -2529,11 +2345,9 @@ sub importWhoisDB
       push(@newISPs, "IPv6\t$cidr\tNULL\t$fields[1]\t$fields[2]\t$fields[3]");
     }
   }
-  
   # Update DB
   $winPb->lblPbCurr->Text($STR{'importingWhoisData'});
   my ($nbrAdd, $nbrModif) = &feedWhoisDatabase(\@newISPs, $nbrISP);
-  
   # Refresh grid
   $winDB->DBGrid->AutoSizeColumns();
   $winDB->DBGrid->ExpandColumnsToFit();
@@ -2541,11 +2355,9 @@ sub importWhoisDB
   $winDB->DBGrid->ScrollPos(1,0);
   $winDB->DBGrid->SortCells(0, 1, \&sortIP);
   $winDB->DBGrid->Refresh();
-  
   # Status bar
   $nbrISP = $winDB->DBGrid->GetRows() - 1;
   $winDB->statusBar->Text(" $STR{'numberISP'}: $nbrISP | $STR{'numberISP'} $STR{'added'}: $nbrAdd | $STR{'numberISP'} $STR{'modified'}: $nbrModif");
-  
   # Turn off progress bar
   $winPb->lblPbCurr->Text('');
   $winPb->lblCount->Text('');
@@ -2564,18 +2376,15 @@ sub feedWhoisDatabase
   my $whoisDB   = $winConfig->tfDbFile->Text();
   my $nbrAdd    = 0;
   my $nbrModif  = 0;
-  my $count     = 0;  
-
+  my $count     = 0;
   # Connect to DB
   my $dsn = "DBI:SQLite:dbname=$whoisDB";
   my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })
             or Win32::GUI::MessageBox($win, $STR{'errCreatingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
-
   # Progress bar
   $winPb->pbWinPb->SetRange(0, $nbrISP);
   $winPb->pbWinPb->SetPos(0);
   $winPb->pbWinPb->SetStep(1);
-  
   # Check if ISP is known
   foreach my $newISP (@{$refNewISP}) {
     my $lineInGrid;
@@ -2590,7 +2399,6 @@ sub feedWhoisDatabase
       my $response;
       if    ($fieldsNewISP[0] eq 'IPv4') { $response = &checkISP_IPv4(\$dbh, $fieldsNewISP[1], $fieldsNewISP[2]); }
       elsif ($fieldsNewISP[0] eq 'IPv6') { $response = &checkISP_IPv6(\$dbh, $fieldsNewISP[1]); }
-      
       # Fields($response): 0 = Type (IPv4 or IPv6), 1 and 2 = range or cidr, 3 = ISP name, 4 = country, 5 = date
       if ($response) {
         my $newer = &newerISP($newISP, $response);
@@ -2603,21 +2411,18 @@ sub feedWhoisDatabase
             $lineInGrid = &modifyISPGrid(\@ISP2add);
             $nbrModif++;
           }
-          
           # Network whois data extracted (btnExtract2DB_Click only)
           if ($winConfig->chDBCache->Checked() and exists($$refNWData{$key}) and length($$refNWData{$key}) > 1) {
             &storeNWData($fieldsNewISP[1], $fieldsNewISP[2], \$$refNWData{$key}, $lineInGrid);
           }
         }
       }
-      
       # ISP is unknown, add it
       else {
         my $return = &addISP(\$dbh, \@fieldsNewISP);
         if ($return) {
           $lineInGrid = &addISPGrid(\@fieldsNewISP);
           $nbrAdd++;
-          
           # Network whois data extracted (btnExtract2DB_Click only)
           if ($winConfig->chDBCache->Checked() and exists($$refNWData{$key}) and length($$refNWData{$key}) > 1) {
             &storeNWData($fieldsNewISP[1], $fieldsNewISP[2], \$$refNWData{$key}, $lineInGrid);
@@ -2626,7 +2431,6 @@ sub feedWhoisDatabase
       }
     }
   }
-
   $dbh->disconnect();
   return($nbrAdd, $nbrModif);
 
@@ -2638,7 +2442,6 @@ sub btnExportDB_Click
 {
   # Local variables
   my $whoisDB = $winConfig->tfDbFile->Text();
-  
   # Show SaveFileWindow
   my $file = Win32::GUI::GetSaveFileName( -owner            => $winDB                     ,
                                           -title            => $STR{'btnExportDBTip'}.':' ,
@@ -2654,22 +2457,18 @@ sub btnExportDB_Click
         $winDB->ChangeCursor($ARROW);
         threads->exit();
       };
-
       # Connect to DB
       my $dsn = "DBI:SQLite:dbname=$whoisDB";
       my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })
                 or Win32::GUI::MessageBox($win, $STR{'errCreatingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
-      
       # Count number of ISP
       # Database: table = WHOIS_DB, Fields = range_s, range_e, isp, country, date
       my $allIPv4 = $dbh->selectall_arrayref("SELECT * FROM WHOIS_DB ORDER BY range_s ASC");
       my $allIPv6 = $dbh->selectall_arrayref("SELECT * FROM WHOIS_DB_6 ORDER BY ipv6_range ASC");
       my @all = (@$allIPv4, @$allIPv6);
       my $nbrISP = scalar(@all);
-        
-      $winDB->ChangeCursor($HOURGLASS);
-      
       # Show progress window
+      $winDB->ChangeCursor($HOURGLASS);
       $winPb->lblPbCurr->Text($STR{'exportingWhoisDB'});
       $winPb->lblCount->Text("0 / $nbrISP");
       $winPb->pbWinPb->SetRange(0, $nbrISP);
@@ -2679,18 +2478,15 @@ sub btnExportDB_Click
       $winPb->Show();
       $winDB->Disable();
       $winDB->ChangeCursor($HOURGLASS);
-      
-       # Export DB
+      # Export DB
       &exportWhoisDB($file, \@all, $nbrISP);
       $dbh->disconnect();
-      
       # Message
       $winDB->ChangeCursor($ARROW);
       &winPb_Terminate;
       Win32::GUI::MessageBox($winDB, $STR{'exportSucess'}, "XL-Whois $VERSION", 0x40040);
     });
   }
-  
   return(1);
   
 }  #--- End btnExportDB_Click
@@ -2702,7 +2498,6 @@ sub exportWhoisDB
   # Local variables
   my ($DBFile, $refData, $nbrISP) = @_;
   my $i = 0;
-
   # Open and write data to file
   open my $db_export, '>', $DBFile or Win32::GUI::MessageBox($win, $STR{'errWriting'}.$!, $STR{'error'}, 0x40010);
   foreach my $row (@$refData) {
@@ -2771,7 +2566,6 @@ sub btnExtract2DB_Click
       }
     }
     my $nbrFiles = @listFiles;
-    
     if ($nbrFiles > 0) {
       $THR = threads->create(sub {
         # Thread 'cancellation' signal handler
@@ -2780,8 +2574,8 @@ sub btnExtract2DB_Click
           $winDB->ChangeCursor($ARROW);
           threads->exit();
         };
-
         # Show progress window
+        $winDB->ChangeCursor($HOURGLASS);
         $winPb->lblPbCurr->Text($STR{'extractingFiles'});
         $winPb->lblCount->Text("0 / $nbrFiles");
         $winPb->pbWinPb->SetRange(0, $nbrFiles);
@@ -2790,8 +2584,6 @@ sub btnExtract2DB_Click
         $winPb->Center($win);
         $winPb->Show();
         $winDB->Disable();
-        $winDB->ChangeCursor($HOURGLASS);
-        
         # Extract ISP data from each files
         my $count = 0;
         my @newISP;
@@ -2808,12 +2600,10 @@ sub btnExtract2DB_Click
           }
           $winPb->pbWinPb->StepIt();
         }
-        
         # Update DB
         $winPb->lblPbCurr->Text($STR{'updatingDB'});
         my $nbrISP = @newISP;
         my ($nbrAdd, $nbrModif) = &feedWhoisDatabase(\@newISP, $nbrISP, \%NWData);
-
         # Refresh grid
         $winDB->DBGrid->AutoSizeColumns();
         $winDB->DBGrid->ExpandColumnsToFit();
@@ -2821,11 +2611,9 @@ sub btnExtract2DB_Click
         $winDB->DBGrid->ScrollPos(1,0);
         $winDB->DBGrid->SortCells(0, 1, \&sortIP);
         $winDB->DBGrid->Refresh();
-        
         # Status bar
         $nbrISP = $winDB->DBGrid->GetRows() - 1;
         $winDB->statusBar->Text(" $STR{'numberISP'}: $nbrISP | $STR{'numberISP'} $STR{'added'}: $nbrAdd | $STR{'numberISP'} $STR{'modified'}: $nbrModif");
-        
         # Turn off progress bar
         $winPb->lblPbCurr->Text('');
         $winPb->lblCount->Text('');
@@ -2835,6 +2623,7 @@ sub btnExtract2DB_Click
       });
     }
   }
+  
 }  #--- End btnExtract2DB_Click
 
 #--------------------------#
@@ -2849,14 +2638,12 @@ sub btnValidDB_Click
     $winDB->Disable();
     $winAWD->Center($win);
     $winAWD->Show();
-  
     # Progress
     my $nbrISP = $winDB->DBGrid->GetRows() - 1;
     $winAWD->pbWinPb->SetRange(0, $nbrISP);
     $winAWD->pbWinPb->SetPos(0);
     $winAWD->pbWinPb->SetStep(1);
     $NBR_DELETED_ISP = 0;
-    
     $ANALYSIS_QUEUE = new Thread::Queue;
     $ANALYSIS_QUEUE->enqueue('start');
     $THR = threads->new(\&validWhoisDB);
@@ -2868,11 +2655,8 @@ sub btnValidDB_Click
 sub validWhoisDB
 #--------------------------#
 {
-  # Cancel button
-  $SIG{'KILL'} = sub { threads->exit(); };
-  
+  $SIG{'KILL'} = sub { threads->exit(); }; # Cancel button
   $winDB->ChangeCursor($HOURGLASS);
-
   # Analyse each ISP starting from the end
   # IPv6 must be ignored in this function
   while (my $lastISP = $ANALYSIS_QUEUE->dequeue) {
@@ -2888,13 +2672,11 @@ sub validWhoisDB
         my $isp     = $winDB->DBGrid->GetCellText($i, 2);
         my $country = $winDB->DBGrid->GetCellText($i, 3);
         my $date    = $winDB->DBGrid->GetCellText($i, 4);
-        
         # Fields: 0 = ip start, 1 = ip end, 2 = ISP name, 3 = country, 4 = date
         $winAWD->lblPbCurr->Text("$STR{'analysing'}: $range_s-$range_e");
         my $curr       = $i;
         my $realNbrISP = $nbrISP - 1;
         $winAWD->lblWinPb->Text("$curr / $realNbrISP");
-        
         # If a range is included
         my @rangesIn;
         for (my $j = $i; $j < $nbrISP; $j++) {
@@ -2912,7 +2694,6 @@ sub validWhoisDB
               my $range_s2cmpInt = unpack 'N', pack 'C4', split '\.', $range_s2cmp;
               my $range_e2cmpInt = unpack 'N', pack 'C4', split '\.', $range_e2cmp;
               my $included       = &inRange($range_sInt, $range_eInt, $range_s2cmpInt, $range_e2cmpInt);
-              
               # Compared range is in the parent range
               if ($included == 2) {
                 my $ISP2cmpStr = "$range_s2cmp|$range_e2cmp|$isp2cmp|$country2cmp|$date2cmp";
@@ -2923,7 +2704,6 @@ sub validWhoisDB
             }
           }
         }
-      
         my $nbrRangesIn = @rangesIn;
         if ($nbrRangesIn > 0) {
           $winAWD->GridISPWide->SetRows(2);
@@ -2940,7 +2720,6 @@ sub validWhoisDB
           $winAWD->GridISPWide->SetCellText( 1, 3, $isp);
           $winAWD->GridISPWide->SetCellText( 1, 4, $country);
           $winAWD->GridISPWide->SetCellText( 1, 5, $date);
-          
           $winAWD->GridISPin->SetRows($nbrRangesIn+1);
           $winAWD->GridISPin->SetCellText( 0, 1, $STR{'cbFilterField1'});
           $winAWD->GridISPin->SetCellText( 0, 2, $STR{'cbFilterField2'});
@@ -2982,11 +2761,9 @@ sub validWhoisDB
           last;
         }
       }
-      
       $winAWD->pbWinPb->StepIt();
       $i++;
     } # End browsing rows
-    
     if ($i == $nbrISP) {
       # Refresh grid
       $winDB->DBGrid->AutoSizeColumns();
@@ -2995,11 +2772,9 @@ sub validWhoisDB
       $winDB->DBGrid->ScrollPos(1,0);
       $winDB->DBGrid->SortCells(0, 1, \&sortIP);
       $winDB->DBGrid->Refresh();
-      
       # Status bar
       $nbrISP = $winDB->DBGrid->GetRows() - 1;
       $winDB->statusBar->Text(" $STR{'numberISP'}: $nbrISP | $STR{'numberISP'} $STR{'deleted'}: $NBR_DELETED_ISP");
-      
       # Turn off progress bar
       $winAWD->lblPbCurr->Text('');
       $winAWD->lblWinPb->Text('');
@@ -3017,13 +2792,10 @@ sub GridISPWide_DblClick
 #--------------------------#
 {
   # Local variables
-  my ($row, $column) = @_;
+  my $row = shift;
   my $selStatus = $winAWD->GridISPWide->GetCellCheck($row, 0);
-  # Check
-  if (!$selStatus) { $winAWD->GridISPWide->SetCellCheck($row, 0, 1); }
-  # Uncheck
-  else             { $winAWD->GridISPWide->SetCellCheck($row, 0, 0); }
-  
+  if (!$selStatus) { $winAWD->GridISPWide->SetCellCheck($row, 0, 1); } # Check
+  else             { $winAWD->GridISPWide->SetCellCheck($row, 0, 0); } # Uncheck
   return(1);
 
 }  #--- End GridISPWide_DblClick
@@ -3033,13 +2805,10 @@ sub GridISPin_DblClick
 #--------------------------#
 {
   # Local variables
-  my ($row, $column) = @_;
+  my $row = shift;
   my $selStatus = $winAWD->GridISPin->GetCellCheck($row, 0);
-  # Check
-  if (!$selStatus) { $winAWD->GridISPin->SetCellCheck($row, 0, 1); }
-  # Uncheck
-  else             { $winAWD->GridISPin->SetCellCheck($row, 0, 0); }
-  
+  if (!$selStatus) { $winAWD->GridISPin->SetCellCheck($row, 0, 1); } # Check
+  else             { $winAWD->GridISPin->SetCellCheck($row, 0, 0); } # Uncheck
   return(1);
 
 }  #--- End GridISPin_DblClick
@@ -3066,7 +2835,6 @@ sub btnAWDNext_Click
     }
     $i++;
   }
-
   # Delete ISP
   if (scalar(@listRanges) > 0) {
     # Connect to DB
@@ -3074,7 +2842,6 @@ sub btnAWDNext_Click
     my $dsn = "DBI:SQLite:dbname=$whoisDB";
     my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })
               or Win32::GUI::MessageBox($win, $STR{'errCreatingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
-
     # Delete from database
     foreach my $isp2del (@listRanges) {
       my ($ipStart2del, $ipEnd2del) = split(/\-/, $isp2del);
@@ -3087,7 +2854,6 @@ sub btnAWDNext_Click
     }
     $dbh->disconnect();
   }
-  
   # Row number of the last processed entry
   my $progress = $winAWD->lblWinPb->Text();
   my $lastISP  = (split(/ \/ /, $progress))[0];
@@ -3132,7 +2898,6 @@ sub tfSearchDB_Change
   # Local variables
   my $searchStr   = $winDB->tfSearchDB->Text();
   my $nbrStrChars = length($searchStr);
-
   # Activate search button
   if ($searchStr) {
     $winDB->btnSearchDB->Enable();
@@ -3145,7 +2910,6 @@ sub tfSearchDB_Change
     $winDB->btnSearchDB_p->Disable();
     $winDB->btnSearchDB_n->Disable();
   }
-    
   # Select line with partial IP
   if ($searchStr =~ /^([0-9\.]+)/) {
     $winDB->ChangeCursor($HOURGLASS);
@@ -3180,7 +2944,6 @@ sub btnSearchDB_Click
   # Local variables
   my $searchStr = $winDB->tfSearchDB->Text();
   my $found     = 0;
-  
   # Search IPv4
   if ($searchStr =~ /^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$/) {
     my $searchIP = $1;
@@ -3241,7 +3004,6 @@ sub btnSearchDB_p_Click
   my $searchStr = $winDB->tfSearchDB->Text();
   my $selRow    = ($winDB->DBGrid->GetSelectedCellRange())[0];
   my $found     = 0;
-
   # Search in FSI field
   if ($searchStr) {
     for (my $i = $selRow-1; $i > 0; $i--) {
@@ -3255,7 +3017,6 @@ sub btnSearchDB_p_Click
       }
     }
   }
-  
   # If not found
   $winDB->ChangeCursor($ARROW);
   if ($found == 0) { Win32::GUI::MessageBox($win, $STR{'noMoreResults'}, $STR{'searching'}, 0x40040); }
@@ -3270,7 +3031,6 @@ sub btnSearchDB_n_Click
   my $searchStr = $winDB->tfSearchDB->Text();
   my $selRow    = ($winDB->DBGrid->GetSelectedCellRange())[0];
   my $found     = 0;
-
   # Search in FSI field
   if ($searchStr) {
     for (my $i = $selRow+1; $i < $winDB->DBGrid->GetRows(); $i++) {
@@ -3284,7 +3044,6 @@ sub btnSearchDB_n_Click
       }
     }
   }
-  
   # If not found
   $winDB->ChangeCursor($ARROW);
   if ($found == 0) { Win32::GUI::MessageBox($win, $STR{'noMoreResults'}, $STR{'searching'}, 0x40040); }
@@ -3350,10 +3109,9 @@ sub cbFilterField_Change
                       3 => ['', $STR{'equal'}, $STR{'notEqual'}, $STR{'contains'}, $STR{'notContains'}],
                       4 => ['', $STR{'equal'}, $STR{'notEqual'}],
                       5 => ['', $STR{'equal'}, $STR{'notEqual'}, $STR{'greater'}, $STR{'greaterEqual'}, $STR{'lower'}, $STR{'lowerEqual'}], );
-  
   # Possible values for field: 0 = '' (No value), 1 = 'Start IP', 2 = 'End IP', 3 = 'ISP', 4 = 'Country', 5 = 'Date'
   # Start IP
-  if      ($field) {
+  if ($field) {
     $winFilter->cbOperator->ResetContent();
     foreach (@{$operators{$field}}) { $winFilter->cbOperator->Add($_); }
     $winFilter->cbOperator->SetCurSel(0);
@@ -3362,9 +3120,7 @@ sub cbFilterField_Change
     $winFilter->cbFilterValue->ResetContent();
     $winFilter->tfFilterValue->Enable();
     $winFilter->tfFilterValue->Text('');
-    # Reset filter
-    if (!$ADD_FILTER) { $winDB->tfFilterDB->Text(''); }
-
+    if (!$ADD_FILTER) { $winDB->tfFilterDB->Text(''); } # Reset filter
   # There is no value
   } else {
     $winFilter->cbOperator->ResetContent();
@@ -3387,23 +3143,19 @@ sub cbOperator_Change
   my $addOperator = $winFilter->cbAddFilterOp->GetCurSel(); # Add operator: 0 == OR, 1 == AND
   my $field       = $winFilter->cbFilterField->GetCurSel();
   my $operator    = $winFilter->cbOperator->GetCurSel();
-  
   # Possible values for field: 0 = '' (No value), 1 = 'Start IP', 2 = 'End IP', 3 = 'ISP', 4 = 'Country', 5 = 'Date'
   # Values of operator depend on field value
-  
   if ($operator) {
     # Case of a simple textfield (ISP, Contains or Not contains)
     if ($field == 3 and ($operator == 3 or $operator == 4)) {
       $winFilter->btnApplyFilter->Disable;
       $winFilter->cbFilterValue->Hide();
       $winFilter->tfFilterValue->Show();
-      
     # Case of combobox values
     } else {
       $winFilter->cbFilterValue->Show();
       $winFilter->tfFilterValue->Hide();
       my %values;
-  
       # Gather each row value
       for (my $row = 1; $row < $winDB->DBGrid->GetRows(); $row++) {
         if ($addOperator) {
@@ -3417,7 +3169,6 @@ sub cbOperator_Change
           if (!exists($values{$value})) { $values{$value} = 1; }
         }
       }
-      
       # Fill the combobox after sort
       my @listValues;
       if ($field == 1 or $field == 2) {
@@ -3472,7 +3223,6 @@ sub btnApplyFilter_Click
   my $addOperatorStr;
   my @currFilters;
   my $filterStr;
-  
   # If Add Filter, keep the current filter
   if ($ADD_FILTER == 1) {
     my $currFilterStr  = $winDB->tfFilterDB->Text();
@@ -3481,20 +3231,14 @@ sub btnApplyFilter_Click
     $addOperatorStr =~ s/OR/||/;
     $filterStr .= "$currFilterStr $addOperatorStr ";
   }
-
-  
   # Case of a simple textfield (ISP, Contains or Not contains)
   if ($field == 3 and ($operator == 3 or $operator == 4)) { $valueStr = $winFilter->tfFilterValue->Text(); }
-  
   # Filter string
   $filterStr .= "$fieldStr $operatorSymbol{$field}[$operator] \"$valueStr\"";
-  
   # Write new filter string in filter textfield
   $winDB->tfFilterDB->Text($filterStr);
-  
   # Load Whois Database with Filters
   &applyFilters();
-  
   &winFilter_Terminate;
 
 }  #--- End btnApplyFilter_Click
@@ -3507,7 +3251,6 @@ sub applyFilters
   my $filterStr = $winDB->tfFilterDB->Text();
   my @filters;
   my $nbrDisplayedRow = 0;
-  
   # Split filters
   while ($filterStr =~ /((?: && | \|\| )?[^ ]+ [^ ]+ \"[^\"]+\")/) {
     my $filter = $1;
@@ -3515,7 +3258,6 @@ sub applyFilters
     my $filter2rem = quotemeta($filter);
     $filterStr =~ s/$filter2rem//;
   }
-  
   # Apply each filter
   foreach (@filters) {
     my @partFilter = split(/ /, $_);
@@ -3539,7 +3281,6 @@ sub applyFilters
       $value =~ s/^\"//;
       $value =~ s/\" $//;
     }
-    
     # Determine column to filter
     my $col2Filter;
     if    ($field eq $STR{'cbFilterField1'}) { $col2Filter = 0; }
@@ -3547,7 +3288,6 @@ sub applyFilters
     elsif ($field eq $STR{'cbFilterField3'}) { $col2Filter = 2; }
     elsif ($field eq $STR{'cbFilterField4'}) { $col2Filter = 3; }
     else                                     { $col2Filter = 4; }
-    
     # Operator is AND, look at displayed rows
     if ($addOperator and $addOperator eq '&&') {
       # Test each row
@@ -3566,7 +3306,6 @@ sub applyFilters
           elsif ($operator)                                    { $winDB->DBGrid->SetRowHeight($i, 0); $nbrDisplayedRow--; }
         }
       }
-    
     # Operator is OR, only look at hidden rows
     } elsif ($addOperator and $addOperator eq '||') {
       # Test each row
@@ -3585,7 +3324,6 @@ sub applyFilters
           elsif ($operator)                                    { $winDB->DBGrid->SetRowHeight($i, 0); }
         }
       }
-    
     # First filter, browse all the grid
     } else {
       # Test each row
@@ -3603,7 +3341,6 @@ sub applyFilters
       }
     }
   }
-  
   $winDB->DBGrid->Refresh();
   my $nbrISP = $winDB->DBGrid->GetRows() - 1;
   $winDB->statusBar->Text(" $STR{'numberISP'}: $nbrISP | $STR{'numberISP'} $STR{'displayed'}: $nbrDisplayedRow");
@@ -3648,7 +3385,6 @@ sub btnFilterDB_del_Click
   # Resize Rows
   for (my $i = 1; $i < $winDB->DBGrid->GetRows(); $i++) { $winDB->DBGrid->SetRowHeight($i, 22); }
   $winDB->DBGrid->Refresh();
-  # $STR{'numberISP'}
   my $nbrISP = $winDB->DBGrid->GetRows() - 1;
   $winDB->statusBar->Text(" $STR{'numberISP'}: $nbrISP");
   
@@ -3671,21 +3407,18 @@ sub extractISPData
   my $startPre = 0; # Indicates that we are in <pre>...</pre>
   my $i = 1;        # Incremental value, used for multiple extractions
   my $last;         # Last extracted ISP
-  
   # Open file
   open(FILE, $file) or Win32::GUI::MessageBox($win, $STR{'errReading'}.$!, $STR{'error'}, 0x40010);
   my @tab = <FILE>;
   close(FILE);
   my ($s,$min,$h,$d,$m,$y) = (&date((stat($file))[9]))[0,1,2,3,4,5];
   my $dateFile             = "$y-$m-$d $h:$min:$s";
-  
   # Split lines
   my @tabLines;
   foreach my $line (@tab) {
     if ($line =~ /[\r\n]/) { push(@tabLines, split(/[\r\n]/, $line)); }
     else                   { push(@tabLines, $line);                  }
   }
-  
   # ExtractData
   foreach my $line (@tabLines) {
     if ($line =~ /<pre(?:[^>]+)?>/) { $startPre = 1; } # Start of <pre>...</pre> 
@@ -3736,21 +3469,16 @@ sub extractISPData
         @tempNWData = ();
       }
     }
-    
     # Process the first ISP (if all necessary details have been found)
     if ($tempNewISP{"type-$i"} and
         ((($tempNewISP{"type-$i"} eq 'IPv4' and ($tempNewISP{"range-$i"} or $tempNewISP{"cidr-$i"})) or # Range IPv4
           ($tempNewISP{"type-$i"} eq 'IPv6' and $tempNewISP{"cidr-$i"})) and                            # Range IPv6
          ($tempNewISP{"provider-$i"} or $tempNewISP{"descr-$i"})         and                            # Description
          $tempNewISP{"country-$i"})) {                                                                  # Country
-      
       # Post processing on IPv4 entry
       if ($tempNewISP{"type-$i"} eq 'IPv4') {
         # Convert CIDR if necessary
-        if ($tempNewISP{"cidr-$i"} and !$tempNewISP{"range-$i"}) {
-          $tempNewISP{"range-$i"} = &CIDR2Range($tempNewISP{"cidr-$i"});
-        }
-        
+        if ($tempNewISP{"cidr-$i"} and !$tempNewISP{"range-$i"}) { $tempNewISP{"range-$i"} = &CIDR2Range($tempNewISP{"cidr-$i"}); }
         # If parent ISP is the same, keep the major range, keep both if different
         my $j = 0;
         my %parent;
@@ -3759,7 +3487,6 @@ sub extractISPData
           my $tmpDesc;
           if ($tempNewISP{"provider-$i"}) { $tmpISP  = quotemeta($tempNewISP{"provider-$i"}); }
           if ($tempNewISP{"descr-$i"}   ) { $tmpDesc = quotemeta($tempNewISP{"descr-$i"});    }
-          
           # If the same
           if (($tmpISP and $parent =~ /$tmpISP/i) or ($tmpDesc and $parent =~ /$tmpDesc/i)) {
             if ($parent =~ /((?:[0-9]{1,3}\.){3}[0-9]{1,3}) - ((?:[0-9]{1,3}\.){3}[0-9]{1,3})/) {
@@ -3803,7 +3530,6 @@ sub extractISPData
       $c1 = 0; $c2 = 0; $c3 = 0; $c4 = 0;
     }
   }
-  
   return(\%newISPs);
   
 }  #--- End extractISPData
@@ -3815,7 +3541,6 @@ sub inRange
   # Local variables
   my($ipIntStart1, $ipIntEnd1, $ipIntStart2, $ipIntEnd2) = @_; # Parameters ex.: 24.37.0.0, 24.37.255.255, 24.37.63.0, 24.37.63.255
   my $results; # 0 = range1 == range2, 1 = range1 in range2, 2 = range2 in range1, 3 = Ranges are different
-  
   # Check if range1 == range2
   if    (($ipIntStart1 == $ipIntStart2) and ($ipIntEnd1   == $ipIntEnd2)) { return(0); }
   # Check if range1 in range2
@@ -3835,7 +3560,6 @@ sub CIDR2Range
 {
   # Local variables
   my ($range) = shift;
-
   # Convert range from CIDR to IP range (Ex.: 123.123/16 to 123.123.0.0 - 123.123.255.255)
   if ($range =~ /(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){0,3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/[0-9]{1,2}/) {
     my($refIp, $mask) = split(/\//, $range);
@@ -3855,7 +3579,6 @@ sub formatISP
   my ($refISP, $ind) = @_;
   my $newISP; # Ex.: IPv4\t123.123.0.0\t123.123.255.255\tProvider\tCountry\tDate
               # Ex.: IPv6\t2001:568::/29\tNULL\tProvider\tCountry\tDate
-
   # Format entry
   $newISP = $$refISP{"type-$ind"}; # Type: IPv4 or IPv6
   # IPv4
@@ -3881,7 +3604,6 @@ sub formatISP
   }
   $newISP .= "\t".$$refISP{"country-$ind"}; # Country
   $newISP .= "\t".$$refISP{"date-$ind"};    # Date
-  
   return($newISP);
 
 }  #--- End formatISP
@@ -3895,7 +3617,6 @@ sub checkISP_IPv4
   my $ipStartInt = unpack 'N', pack 'C4', split '\.', $ipStart;
   my $ipEndInt   = unpack 'N', pack 'C4', split '\.', $ipEnd;
   my $response;
-  
   # Check range in the database
   # Database: table = WHOIS_DB, Fields = range_s, range_e, isp, country, date
   my $sth = $$refDbh->prepare("SELECT range_s,range_e,isp,country,date from WHOIS_DB
@@ -3920,7 +3641,6 @@ sub checkISP_IPv6
   my $refDbh = shift;
   my $cidr   = shift;
   my $response;
-  
   # Check range in the database
   # Database: table = WHOIS_DB_6, Fields = ipv6_range, isp, country, date
   my $sth = $$refDbh->prepare("SELECT ipv6_range,isp,country,date from WHOIS_DB_6 WHERE ipv6_range == ?");
@@ -3940,19 +3660,15 @@ sub newerISP
 {
   # Local variables
   my ($newISP, $response) = @_;
-  
   # If no date, consider as older
   if (!(split(/\t/, $response))[5]) { return(1); }
   if (!(split(/\t/, $newISP))[5]  ) { return(0); }
-  
   # Date format 2016-01-01
   my ($dateNewISP) = (split(/\t/, $newISP))[5];
   my ($dateOld)    = (split(/\t/, $response))[5];
-  
   # Convert to unixtime
   my $time1 = str2time($dateNewISP);
   my $time2 = str2time($dateOld);
-  
   # Compare
   if ($time1 <= $time2) { return(0); } # $newISP is older or equal
   else                  { return(1); } # $newISP is newer
@@ -3966,7 +3682,6 @@ sub modifyISP
   # Local variables
   my ($refDbh, $refISP2add) = @_;
   # Fields ($refISP2add): 0 = Type (IPv4 or IPv6), 1 and 2 = range or cidr, 3 = ISP name, 4 = country, 5 = date
-  
   # Modify entry in IPv4 database
   if ($$refISP2add[0] eq 'IPv4') {
     # Database: table = WHOIS_DB, Fields = range_s, range_e, isp, country, date
@@ -3985,7 +3700,6 @@ sub modifyISP
       Win32::GUI::MessageBox($win, $STR{'errDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
       return(0);
     } else { return(1); }
-  
   # Modify entry in IPv6 database
   } elsif ($$refISP2add[0] eq 'IPv6') {
     # Database: table = WHOIS_DB_6, Fields = ipv6_range, isp, country, date
@@ -4011,7 +3725,6 @@ sub modifyISPGrid
   # Local variables
   my ($refISP2add) = @_;
   # Fields ($refISP2add): 0 = Type (IPv4 or IPv6), 1 and 2 = range or cidr, 3 = ISP name, 4 = country, 5 = date
-  
   # Find the older ISP in Grid and modify it
   if ($$refISP2add[0] eq 'IPv4') {
     for (my $i = 1; $i < $winDB->DBGrid->GetRows(); $i++) {
@@ -4049,7 +3762,6 @@ sub deleteISP_IPv4
   my $ipStartInt = unpack 'N', pack 'C4', split '\.', $ipStart;
   my $ipEndInt   = unpack 'N', pack 'C4', split '\.', $ipEnd;
   my $response;
-  
   # Delete entry in DB
   # Database: table = WHOIS_DB, Fields = range_s, range_e, isp, country, date
   my $sth = $$refDbh->prepare("DELETE from WHOIS_DB where $ipStartInt == range_s AND $ipEndInt == range_e");
@@ -4069,7 +3781,6 @@ sub deleteISP_IPv6
   my ($refDbh, $ipStart, $ipEnd) = @_;
   my $cidr = Net::CIDR::range2cidr("$ipStart\-$ipEnd");
   my $response;
-  
   # Delete entry in DB
   # Database: table = WHOIS_DB_6, Fields = ipv6_range, isp, country, date
   my $sth = $$refDbh->prepare("DELETE from WHOIS_DB_6 WHERE ipv6_range == ?");
@@ -4087,7 +3798,6 @@ sub deleteISPGrid
 {
   # Local variables
   my ($noRow, $ipStart, $ipEnd) = @_;
-  
   # Find the ISP in grid and delete
   for (my $i = $noRow; $i < $winDB->DBGrid->GetRows(); $i++) {
     my $range_s = $winDB->DBGrid->GetCellText($i, 0);
@@ -4109,7 +3819,6 @@ sub addISP
   # Local variables
   my ($refDbh, $refNewISP) = @_;
   # Fields ($refNewISP): 0 = Type (IPv4 or IPv6), 1 and 2 = range or cidr, 3 = ISP name, 4 = country, 5 = date
-  
   # Add entry in IPv4 database
   if ($$refNewISP[0] eq 'IPv4') {
     # Database: table = WHOIS_DB, Fields = range_s, range_e, isp, country, date
@@ -4127,7 +3836,6 @@ sub addISP
       Win32::GUI::MessageBox($win, $STR{'errDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
       return(0);
     } else { return(1); }
-    
   # Add entry in IPv6 database
   } elsif ($$refNewISP[0] eq 'IPv6') {
     # Database: table = WHOIS_DB_6, Fields = ipv6_range, isp, country, date
@@ -4157,13 +3865,11 @@ sub checkIP_WhoisDB_IPv4
   my $country;
   my $date;
   my $interMin = 4294967295;
-  
   # Check if IP address fit any range in database
   my $sth = $$refDbh->prepare("SELECT range_s,range_e,isp,country,date from WHOIS_DB
                               WHERE $ipInt >= range_s AND $ipInt <= range_e");
   my $rv  = $sth->execute();
   if ($rv < 0) { Win32::GUI::MessageBox($win, $STR{'errDB'}.$DBI::errstr, $STR{'error'}, 0x40010); }
-  
   # Select the best answer (smaller range)
   my $refAllRows = $sth->fetchall_arrayref();
   foreach my $refRow (@{$refAllRows}) {
@@ -4185,7 +3891,6 @@ sub checkIP_WhoisDB_IPv6
 {
   # Local variables
   my ($ip, $refDbh) = @_;
-  
   # Check if IP address fit any range in database
   my $all = $$refDbh->selectall_arrayref("SELECT * FROM WHOIS_DB_6");
   foreach my $row (@$all) {
@@ -4207,13 +3912,11 @@ sub checkRange_WhoisDB_IPv4
   my $range_s;
   my $range_e;
   my $interMin = 4294967295;
-  
   # Check if IP address fit any range in database
   my $sth = $$refDbh->prepare("SELECT range_s,range_e from WHOIS_DB
                               WHERE $ipInt >= range_s AND $ipInt <= range_e");
   my $rv  = $sth->execute();
   if ($rv < 0) { Win32::GUI::MessageBox($win, $STR{'errDB'}.$DBI::errstr, $STR{'error'}, 0x40010); }
-  
   # Select the best answer (smaller range)
   my $refAllRows = $sth->fetchall_arrayref();
   foreach my $refRow (@{$refAllRows}) {
@@ -4235,7 +3938,6 @@ sub checkRange_WhoisDB_IPv6
 {
   # Local variables
   my ($ip, $refDbh) = @_;
-  
   # Check if IP address fit any range in database
   my $all = $$refDbh->selectall_arrayref("SELECT ipv6_range FROM WHOIS_DB_6");
   foreach my $row (@$all) {
@@ -4245,9 +3947,7 @@ sub checkRange_WhoisDB_IPv6
       return($range_s, $range_e);
     }
   }
-
-  # Not found
-  return(undef, undef);
+  return(undef, undef); # Not found
 
 }  #--- End checkRange_WhoisDB_IPv6
 
@@ -4258,7 +3958,6 @@ sub addISPGrid
   # Local variables
   my ($refNewISP) = @_;
   # Fields ($refNewISP): 0 = Type (IPv4 or IPv6), 1 and 2 = range or cidr, 3 = ISP name, 4 = country, 5 = date
-
   # Add entry in grid (IPv4)
   if ($$refNewISP[0] eq 'IPv4') {
     if (my $newLine = $winDB->DBGrid->InsertRow($$refNewISP[0], -1)) {
@@ -4270,7 +3969,6 @@ sub addISPGrid
       return($newLine);
     } else { Win32::GUI::MessageBox($win, $STR{'errNewLine'}, $STR{'error'}, 0x40010); }
   }
-  
   # Add entry in grid (IPv6)
   elsif ($$refNewISP[0] eq 'IPv6') {
     if (my $newLine = $winDB->DBGrid->InsertRow($$refNewISP[0], -1)) {
@@ -4336,13 +4034,11 @@ sub DBGrid_DblClick
   my ($row, $column) = @_;
   my $range_s = $winDB->DBGrid->GetCellText($row, 0);
   my $range_e = $winDB->DBGrid->GetCellText($row, 1);
-  
   # Replace not allowed characters for windows filename (IPv6)
   if ($range_s =~ /\:/) {
     $range_s =~ s/\:/_/g;
     $range_e =~ s/\:/_/g;
   }
-  
   # If Network Whois Data exist, show it
   my $networkWhoisDataFile = "$CONFIG{'WHOIS_DATA_CACHE'}\\$range_s\-$range_e\.txt";
   if (-T $networkWhoisDataFile) {
@@ -4356,7 +4052,6 @@ sub DBGrid_DblClick
     $winNWD->Center($winDB);
     $winNWD->DoModal();
   }
-    
   return(1);
 
 }  #--- End DBGrid_RClick
@@ -4372,12 +4067,8 @@ sub winNWD_Resize
 }  #--- End winNWD_Resize
 
 #--------------------------#
-sub btnNWDOk_Click
+sub btnNWDOk_Click { return(-1); }
 #--------------------------#
-{
-  return(-1);
-
-}  #--- End btnNWDOk_Click
 
 #--------------------------#
 sub DBGrid_EndEdit
@@ -4390,11 +4081,9 @@ sub DBGrid_EndEdit
   my $range_e   = $winDB->DBGrid->GetCellText($row, 1);
   my $isp       = $winDB->DBGrid->GetCellText($row, 2);
   my $country   = $winDB->DBGrid->GetCellText($row, 3);
-  
   # Get date and time
   my ($s,$min,$h,$d,$m,$y) = (&date(0))[0,1,2,3,4,5];
   my $date                 = "$y-$m-$d $h:$min:$s";
-  
   # Check values
   if ($range_s and $range_e and $isp and $country and $date) {
     # Check IP address
@@ -4409,25 +4098,21 @@ sub DBGrid_EndEdit
         my $cidr = Net::CIDR::range2cidr("$range_s\-$range_e");
         @newISP = ('IPv6', $cidr, 'NULL', $isp, $country, $date);
       }
-
       # Connect to DB
       my $dsn = "DBI:SQLite:dbname=$whoisDB";
       my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })
                 or Win32::GUI::MessageBox($win, $STR{'errCreatingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
-      
       # Check if ISP already exists
       my $response;
       if    ($range_s =~ /\./) { $response = &checkISP_IPv4(\$dbh, $newISP[1], $newISP[2]); }
       elsif ($range_s =~ /\:/) { $response = &checkISP_IPv6(\$dbh, $newISP[1]); }
       # Fields($response): 0 = Type (IPv4 or IPv6), 1 and 2 = range or cidr, 3 = ISP name, 4 = country, 5 = date
-      
       # If exists, modify
       if ($response) {
         my $return = &modifyISP(\$dbh, \@newISP);
         # Modify in grid
         if ($return) { $winDB->DBGrid->SetCellText($row, 4, $date); }
       }
-      
       # If ISP does not exist, add it
       else {
         my $return = &addISP(\$dbh, \@newISP);
@@ -4465,14 +4150,12 @@ sub getAllRanges_Click
   } else {
     # Get range of the selected entry
     my (@coord) = $winDB->DBGrid->GetSelectedCellRange();
-    
     # Check if row contains Network Whois Data (single row only)
     if ($coord[0] and $coord[2] and $coord[0] == $coord[2]) {
       my $range_s = $winDB->DBGrid->GetCellText($coord[0], 0);
       my $range_e = $winDB->DBGrid->GetCellText($coord[0], 1);
       my $isp     = $winDB->DBGrid->GetCellText($coord[0], 2);
       my $country = $winDB->DBGrid->GetCellText($coord[0], 3);
-      
       $THR = threads->create(sub {
         # Thread 'cancellation' signal handler
         $SIG{'KILL'} = sub {
@@ -4484,7 +4167,6 @@ sub getAllRanges_Click
           $winPb->Hide();
           threads->exit();
         };
-        
         # Thread 'die' signal handler
         $SIG{__DIE__} = sub {
           my $errMsg = (split(/ at /,$_[0]))[0];
@@ -4498,7 +4180,6 @@ sub getAllRanges_Click
           $winPb->Hide();
           Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $errMsg", $STR{'error'}, 0x40010);
         };
-        
         # Turn on progress bar
         &winAddRanges_Terminate;
         $winPb->Center($winDB);
@@ -4508,23 +4189,19 @@ sub getAllRanges_Click
         $winDB->Disable();
         $winDB->ChangeCursor($HOURGLASS);
         $winAddRanges->btnAddRSelected->Disable();
-        
         # Progress bar
         $winPb->pbWinPb->SetRange(0, 3);
         $winPb->pbWinPb->SetPos(0);
         $winPb->pbWinPb->SetStep(1);
-      
         # Request for the asn or the id
         $winPb->lblPbCurr->Text($STR{'queryASNorID'}.'...');
         $winPb->pbWinPb->StepIt();
         my ($registry, $asn, $id) = &getASNorIDForIP($range_s, $range_e);
-        
         # Send the advanced query
         if ($registry and ($asn or $id)) {
           my $return;
           my $refRangesISP;
           my $ISPName;
-          
           # Query the registry to gather all ranges for the ISP
           if    ($asn) { $winPb->lblPbCurr->Text($STR{'queryallRange1'}.$registry.$STR{'queryallRange2'}.$asn.'...'); }
           elsif ($id)  { $winPb->lblPbCurr->Text($STR{'queryallRange1'}.$registry.$STR{'queryallRange2'}.$id.'...');  }
@@ -4535,7 +4212,6 @@ sub getAllRanges_Click
           elsif ($registry eq 'APNIC')  { ($return, $refRangesISP, $ISPName) = &getAllRangesAPNIC($registry,  $asn, $id); }
           # Other registry
           else                          { ($return, $refRangesISP, $ISPName) = &getAllRangesREST($registry,   $asn, $id); }
-          
           # Remove overlapping ranges
           $winPb->lblPbCurr->Text($STR{'remOverlap'}.'...');
           $winPb->pbWinPb->StepIt();
@@ -4564,7 +4240,6 @@ sub getAllRanges_Click
               }
             }
           }
-  
           # Show ranges found 
           if ($return eq $STR{'lblChoice'}) {
             if ($ISPName) { $isp = $ISPName; }
@@ -4589,19 +4264,16 @@ sub getAllRanges_Click
             $winAddRanges->GridISPRanges->Refresh();
             $winAddRanges->GridISPRanges->AutoSize();
             $winAddRanges->GridISPRanges->ExpandLastColumn();
-            
             # Turn off progress bar
             $winPb->lblPbCurr->Text('');
             $winPb->lblCount->Text('');
             $winPb->pbWinPb->SetPos(0);
             &winPb_Terminate;
             $winDB->ChangeCursor($ARROW);
-            
             # Display Add ISP Range Window
             $winAddRanges->Center($winDB);
             $winAddRanges->Show();          
             $winAddRanges->btnAddRSelected->Enable();
-    
           # No match
           } elsif ($return eq $STR{'noMoreResults'}) {
             # Turn off progress bar
@@ -4628,7 +4300,6 @@ sub getAllRanges_Click
           $winPb->pbWinPb->SetPos(0);
           &winPb_Terminate;
           $winDB->ChangeCursor($ARROW);
-          
           # Connection error
           if ($registry eq $STR{'errConnection'}) {
             Win32::GUI::MessageBox($winDB, "$STR{'errConnection'}", $STR{'error'}, 0x40010);
@@ -4658,12 +4329,8 @@ sub getASNorIDForIP
                   'whois.afrinic.net' => 'AFRINIC', );
   my %IPv4; # IPv4 Database
   my %IPv6; # IPv6 Database
-  
   # Complete IP
-  if ($range_s =~ /\./) {
-    while ($range_s !~ /(?:[0-9]{1,3}\.){3}[0-9]{1,3}/) { $range_s .= '.0';   }
-  }
-  
+  if ($range_s =~ /\./) { while ($range_s !~ /(?:[0-9]{1,3}\.){3}[0-9]{1,3}/) { $range_s .= '.0';   } }
   # Find the registry
   if ($CONFIG{'IPv4_DB_FILE'} and -T $CONFIG{'IPv4_DB_FILE'}) { &loadIPv4DB(\%IPv4); }
   if ($CONFIG{'IPv6_DB_FILE'} and -T $CONFIG{'IPv6_DB_FILE'}) { &loadIPv6DB(\%IPv6); }
@@ -4671,7 +4338,6 @@ sub getASNorIDForIP
   if (!$whoisServer) { $whoisServer = 'whois.arin.net'; }
   if ($whoisServer) {
     my $authority = $rirName{$whoisServer};
-    
     # ARIN
     if    ($authority eq 'ARIN') {
       my $client = REST::Client->new();
@@ -4748,7 +4414,6 @@ sub getAllRangesAPNIC
   my $refResponses;
   my %rangesISP;
   my $ispName;
-  
   if ($id) {
     # Get the ISP name
     if ($refResponses = &whoisQuery('whois.apnic.net', $id)) {
@@ -4790,14 +4455,11 @@ sub getAllRangesAPNIC
       }
     } else { return($STR{'errConnection'}); }
   }
-  
   # Return results
   if (scalar(keys %rangesISP) > 0) {
     if ($ispName) { return($STR{'lblChoice'}, \%rangesISP, $ispName); }
     else          { return($STR{'lblChoice'}, \%rangesISP, undef);    }
-  } else { # No results
-    return($STR{'noMoreResults'});
-  }
+  } else { return($STR{'noMoreResults'}); } # No results
 
 }  #--- End getAllRangesAPNIC
 
@@ -4809,7 +4471,6 @@ sub getAllRangesLACNIC
   my ($registry, $asn, $id) = @_;
   my $whoisURL;
   my %rangesISP;
-  
   # Send the query
   my $ua = new LWP::UserAgent;
   $ua->agent($CONFIG{'USERAGENT'});
@@ -4848,11 +4509,9 @@ sub getAllRangesLACNIC
       }
     }
   } else { return($STR{'errConnection'}); }
-  
   # Return results
   if (scalar(keys %rangesISP) > 0) { return($STR{'lblChoice'}, \%rangesISP); }
-  # No results
-  else                             { return($STR{'noMoreResults'});          }
+  else { return($STR{'noMoreResults'}); } # No results
 
 }  #--- End getAllRangesLACNIC
 
@@ -4866,12 +4525,10 @@ sub getAllRangesREST
   my @tabRangesISP;
   my %rangesISP;
   my $ispName;
-  
   # Create an agent
   my $ua = new LWP::UserAgent;
   $ua->agent($CONFIG{'USERAGENT'});
   $ua->default_header('Accept-Language' => 'en');
-    
   # Set the URL
   if      ($registry eq 'ARIN') {
     if    ($id)  { $whoisURL = "http://whois.arin.net/rest/org/$id/nets"; }
@@ -4880,7 +4537,6 @@ sub getAllRangesREST
       my $client = REST::Client->new(useragent => $ua                        ,
                                      timeout   => $CONFIG{'NSLOOKUP_TIMEOUT'}, );
       $client->GET("http://whois.arin.net/rest/asn/$asn");
-      
       if ($client->responseCode() eq '200') {
         if ($client->responseContent() and 
             ($client->responseContent() =~ /<orgRef handle="([^\"]+)" name="[^\"]+"|<orgRef name="[^\"]+" handle="([^\"]+)"/)) {
@@ -4893,13 +4549,10 @@ sub getAllRangesREST
     if    ($id)  { $whoisURL = "http://rest.db.ripe.net/search?inverse-attribute=admin-c&query-string=$id"; }
     elsif ($asn) { $whoisURL = "http://rest.db.ripe.net/search?inverse-attribute=origin&query-string=$asn"; }
   }
-
   # Send the RESTful query
   if ($whoisURL) {
-    my $client = REST::Client->new(useragent => $ua                        ,
-                                   timeout   => $CONFIG{'NSLOOKUP_TIMEOUT'}, );
+    my $client = REST::Client->new(useragent => $ua , timeout => $CONFIG{'NSLOOKUP_TIMEOUT'});
     $client->GET($whoisURL);
-    
     # Parse the answer
     if ($client->responseCode() eq '200') {
       if ($client->responseContent() and my $obj = xml_to_object($client->responseContent())) {
@@ -4948,7 +4601,6 @@ sub getAllRangesREST
       }
     } else { return($STR{'errConnection'}); }
   }
-  
   # Remove overlapping range
   foreach my $range (@tabRangesISP) {
     my ($range_s, $range_e) = split(/\-/, $range);
@@ -4974,14 +4626,11 @@ sub getAllRangesREST
       } else { $rangesISP{$range_s} = $range_e; }
     }
   }
-  
   # Return results
   if (scalar(keys %rangesISP) > 0) {
     if ($ispName) { return($STR{'lblChoice'}, \%rangesISP, $ispName); }
     else          { return($STR{'lblChoice'}, \%rangesISP, undef);    }
-  } else { # No results
-    return($STR{'noMoreResults'});
-  }
+  } else { return($STR{'noMoreResults'}); } # No results
 
 }  #--- End getAllRangesREST
 
@@ -4990,17 +4639,13 @@ sub GridISPRanges_Click
 #--------------------------#
 {
   # Local variables
-  my ($row, $column) = @_;
-  my $i         = 1;
+  my $row = shift;
+  my $i   = 1;
   my $nbrSelect = 0;
-
   # Select or not
   my $selStatus = $winAddRanges->GridISPRanges->GetCellCheck($row, 0);
-  # Check
-  if (!$selStatus) { $winAddRanges->GridISPRanges->SetCellCheck($row, 0, 1); }
-  # Uncheck
-  else             { $winAddRanges->GridISPRanges->SetCellCheck($row, 0, 0); }
-  
+  if (!$selStatus) { $winAddRanges->GridISPRanges->SetCellCheck($row, 0, 1); } # Check
+  else             { $winAddRanges->GridISPRanges->SetCellCheck($row, 0, 0); } # Uncheck
   # List selected rows
   while ($i < $winAddRanges->GridISPRanges->GetRows()) {
     if ($winAddRanges->GridISPRanges->GetCellCheck($i, 0) == 1) {
@@ -5008,7 +4653,6 @@ sub GridISPRanges_Click
     }
     $i++;
   }
-  
   # Enable btnAddRSelected ?
   if ($nbrSelect > 0) { $winAddRanges->btnAddRSelected->Enable();  }
   else                { $winAddRanges->btnAddRSelected->Disable(); }
@@ -5016,12 +4660,8 @@ sub GridISPRanges_Click
 }  #--- End GridISPRanges_Click
 
 #--------------------------#
-sub btnAddRSelected_Click
+sub btnAddRSelected_Click { $THR = threads->create(sub { &addRangeWhoisDB(); }); }
 #--------------------------#
-{
-  $THR = threads->create(sub { &addRangeWhoisDB(); });
-  
-}  #--- End btnAddRSelected_Click
 
 #--------------------------#
 sub addRangeWhoisDB
@@ -5032,7 +4672,6 @@ sub addRangeWhoisDB
   my $date                 = "$y-$m-$d $h:$min:$s";
   my @listRanges;
   my $i = 1;
-  
   # Turn on progress bar
   &winAddRanges_Terminate;
   $winPb->Center($winDB);
@@ -5041,7 +4680,6 @@ sub addRangeWhoisDB
   $winPb->lblCount->Text('');
   $winDB->Disable();
   $winDB->ChangeCursor($HOURGLASS);
-  
   # List of ISP ranges to add and add missing data
   # To Fields: 0 = Type (IPv4 or IPv6), 1 and 2 = range or cidr, 3 = ISP name, 4 = country, 5 = date
   while ($i < $winAddRanges->GridISPRanges->GetRows()) {
@@ -5052,10 +4690,9 @@ sub addRangeWhoisDB
       my $ispName = $winAddRanges->GridISPRanges->GetCellText($i, 3);
       my $country = $winAddRanges->GridISPRanges->GetCellText($i, 4);
       # IPv4
-      if ($range_s !~ /\:/) {
-        $newISP = "IPv4\t$range_s\t$range_e\t$ispName\t$country\t$date";
+      if ($range_s !~ /\:/) { $newISP = "IPv4\t$range_s\t$range_e\t$ispName\t$country\t$date"; }
       # IPv6
-      } else {
+      else {
         my $cidr = Net::CIDR::range2cidr("$range_s\-$range_e");
         $newISP = "IPv6\t$cidr\tNULL\t$ispName\t$country\t$date";
       }
@@ -5063,12 +4700,10 @@ sub addRangeWhoisDB
     }
     $i++;
   }
-
   # Update DB
   my $nbrISP = scalar(@listRanges);
   $winPb->lblPbCurr->Text($STR{'winAddRSelected'}.'...');
   my ($nbrAdd, $nbrModif) = &feedWhoisDatabase(\@listRanges, $nbrISP);
-  
   # Refresh grid
   $winDB->DBGrid->AutoSizeColumns();
   $winDB->DBGrid->ExpandColumnsToFit();
@@ -5076,11 +4711,9 @@ sub addRangeWhoisDB
   $winDB->DBGrid->ScrollPos(1,0);
   $winDB->DBGrid->SortCells(0, 1, \&sortIP);
   $winDB->DBGrid->Refresh();
-  
   # Status bar
   $nbrISP = $winDB->DBGrid->GetRows() - 1;
   $winDB->statusBar->Text(" $STR{'numberISP'}: $nbrISP | $STR{'numberISP'} $STR{'added'}: $nbrAdd | $STR{'numberISP'} $STR{'modified'}: $nbrModif");
-  
   # Turn off progress bar
   $winPb->lblPbCurr->Text('');
   $winPb->lblCount->Text('');
@@ -5091,12 +4724,8 @@ sub addRangeWhoisDB
 }  #--- End addRangeWhoisDB
 
 #--------------------------#
-sub btnAddRCancel_Click
+sub btnAddRCancel_Click { &winAddRanges_Terminate; }
 #--------------------------#
-{
-  &winAddRanges_Terminate;
-  
-}  #--- End btnAddRCancel_Click
 
 #--------------------------#
 sub winAddRanges_Terminate
@@ -5134,7 +4763,6 @@ sub deleteLine_Click
   my $nbrISP  = $winDB->DBGrid->GetRows();
   my $whoisDB = $winConfig->tfDbFile->Text();
   my @ISP2del;
-  
   # Select data to delete
   my $lastSelectedRow; 
   if ($coord[2]) { $lastSelectedRow = $coord[2]; }
@@ -5146,7 +4774,6 @@ sub deleteLine_Click
       push(@ISP2del, "$range_s\-$range_e");
     }
   }
-
   $THR = threads->create(sub {
     # Thread 'cancellation' signal handler
     $SIG{'KILL'} = sub {
@@ -5160,7 +4787,6 @@ sub deleteLine_Click
       $winDB->ChangeCursor($ARROW);
       threads->exit();
     };
-    
     # Show progress window
     my $nbrISP2del = @ISP2del;
     $winPb->lblPbCurr->Text($STR{'deletingISP'});
@@ -5172,12 +4798,10 @@ sub deleteLine_Click
     $winPb->Show();
     $winDB->Disable();
     $winDB->ChangeCursor($HOURGLASS);
-
     # Connect to DB
     my $dsn = "DBI:SQLite:dbname=$whoisDB";
     my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })
               or Win32::GUI::MessageBox($winDB, $STR{'errCreatingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
-    
     # Loop each entry and delete
     my $j = 0;
     foreach my $ISP (@ISP2del) {
@@ -5190,7 +4814,6 @@ sub deleteLine_Click
           my $return;
           if    ($ISPRange_s =~ /\./) { $return = &deleteISP_IPv4(\$dbh, $ISPRange_s, $ISPRange_e); } # Delete in Database (IPv4)
           elsif ($ISPRange_s =~ /\:/) { $return = &deleteISP_IPv6(\$dbh, $ISPRange_s, $ISPRange_e); } # Delete in Database (IPv6)
-          
           if ($return) {
             &deleteISPGrid($i, $ISPRange_s, $ISPRange_e); # Delete in Grid
             # Delete the Network Whois Data File
@@ -5238,7 +4861,6 @@ sub sortIP
   if ($a and $b and $a !~ /\:/ and $b !~ /\:/) {
     my ($a1, $a2, $a3, $a4) = split(/\./, $a);
     my ($b1, $b2, $b3, $b4) = split(/\./, $b);
-
     # Compare each part
     if ($a1 == $b1) {
       if ($a2 == $b2) {
@@ -5248,9 +4870,7 @@ sub sortIP
       } else { return $a2 <=> $b2; }
     } else { return $a1 <=> $b1; }
   # If one of the address is IPv6, compare first number only
-  } else {
-    return (split(/[\.\:]/, $a))[0] <=> (split(/[\.\:]/, $b))[0];
-  }
+  } else { return (split(/[\.\:]/, $a))[0] <=> (split(/[\.\:]/, $b))[0]; }
   
 }  #--- End sortIP
 
@@ -5269,7 +4889,6 @@ sub btnWhois_Click
     if ($nbrItems == 0) {
       Win32::GUI::MessageBox($win, $STR{'errClipboard'}, $STR{'error'}, 0x40010);
       return(0);
-      
     # Whois Request
     } else {
       $THR = threads->create(sub {
@@ -5279,7 +4898,6 @@ sub btnWhois_Click
           $win->ChangeCursor($ARROW);
           threads->exit();
         };
-        
         # Thread 'die' signal handler
         $SIG{__DIE__} = sub {
           my $errMsg = (split(/ at /,$_[0]))[0];
@@ -5289,7 +4907,6 @@ sub btnWhois_Click
           &winPb_Terminate;
           Win32::GUI::MessageBox($winDB, "$STR{'error'}: $errMsg", $STR{'error'}, 0x40010);
         };
-        
         # Show progress window
         $winPb->lblPbCurr->Text($STR{'whoisProgress'});
         $winPb->lblCount->Text("0 / $nbrItems");
@@ -5300,7 +4917,6 @@ sub btnWhois_Click
         $winPb->Show();
         $win->Disable();
         $win->ChangeCursor($HOURGLASS);
-        
         # Local variables
         my $targetDir     = $winConfig->tfReportDir->Text();
         my $whoisDB       = $winConfig->tfDbFile->Text();
@@ -5318,47 +4934,38 @@ sub btnWhois_Click
         my @newISP;
         my %IPv4; # IPv4 Database
         my %IPv6; # IPv6 Database
-        
         # Load IPv4 and IPv6
         if ($CONFIG{'IPv4_DB_FILE'} and -T $CONFIG{'IPv4_DB_FILE'}) { &loadIPv4DB(\%IPv4); }
         if ($CONFIG{'IPv6_DB_FILE'} and -T $CONFIG{'IPv6_DB_FILE'}) { &loadIPv6DB(\%IPv6); }
-        
         # Connect to Whois Database
         if ($whoisDB and -f $whoisDB) {
           my $dsn  = "DBI:SQLite:dbname=$whoisDB";
              $dbh  = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })
                      or Win32::GUI::MessageBox($win, $STR{'errConnectingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
         }
-        
         # Connect to Logging Database
         if ($winConfig->chLogActivate->Checked() and $dbLogFile and -f $dbLogFile) {
           my $dsnLog = "DBI:SQLite:dbname=$dbLogFile";
           $dbhLog    = DBI->connect($dsnLog, undef, undef, { RaiseError => 1, AutoCommit => 1 })
                        or Win32::GUI::MessageBox($win, $STR{'errConnectingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
         }
-        
         # Load Whois Server Database
         my $ref_WSDB = json_file_to_perl($CONFIG{'WS_DB_FILE'});
-        
         foreach my $item (sort { $itemsIndex{$a} <=> $itemsIndex{$b} } keys(%itemsIndex)) {
           my $answer;
           my $return;
-          
           $count++;
           $winPb->lblCount->Text("$count / $nbrItems");
           $winPb->lblPbCurr->Text("Whois on $item...");
-          
           # Check databases
           if (($checkDBOpt and ($checkDBOpt == 1 or $checkDBOpt == 2) and $win->chNetwork->Checked()) or $checkLogging) {
             my $resCheckDB;
-            
             # Check Whois Database (Network whois only)
             if ($checkDBOpt and ($checkDBOpt == 1 or $checkDBOpt == 2) and $win->chNetwork->Checked() and
                 ($itemsType{$item} eq 'IPv4' or $itemsType{$item} eq 'IPv6')) {
               my ($isp, $country, $time);
               if    ($item =~ /\./) { ($isp, $country, $time) = &checkIP_WhoisDB_IPv4($item, \$dbh); } # IPv4
               elsif ($item =~ /\:/) { ($isp, $country, $time) = &checkIP_WhoisDB_IPv6($item, \$dbh); } # IPv6
-              
               # ISP is already known, ignore the request
               if    ($checkDBOpt == 2 and $isp) { $answer = 7; }
               # ISP is already known, ask user what to do
@@ -5368,7 +4975,6 @@ sub btnWhois_Click
                 $resCheckDB .= "$STR{'item'} \xAB $item \xBB $STR{'wasFoundWhoisDB'}:\n\n$ispStr\n\n";
               }
             }
-            
             # Check Logging Database
             if ($checkLogging and !$answer) {
               my ($nbrResults, @results) = &check_LoggingDB($item, \$dbhLog);
@@ -5388,37 +4994,28 @@ sub btnWhois_Click
                 }
               }
             }
-            
             # Entry was found, Ask the user ?
             if (!$answer and $resCheckDB) {
-              # Yes (6), No (7), Cancel (2)
               $answer = Win32::GUI::MessageBox($win, $resCheckDB.$STR{'sendQueryAnyway'}, $STR{'checkDB'}, 0x1023);
               $winPb->SetForegroundWindow();
             }
           }
-      
-          # Cancel, finish all requests
+          # Cancel (2), finish all requests
           if ($answer and $answer == 2) {
             &winPb_Terminate;
             last;
-          }
-          
-          # Answer is No or Check database option is ignore, ignore this request
-          elsif ($answer and $answer == 7) { next; }
-          
-          # Answer is Yes, send the request
+          # Answer is No (7) or Check database option is ignore, ignore this request
+          } elsif ($answer and $answer == 7) { next; }
+          # Answer is Yes (6), send the request
           else {
             # Send request
             my $refAnswer = &whoisReq($item, $itemsType{$item}, $ref_WSDB, \$TLDDB, \%IPv4, \%IPv6);
-
             # Get local time
             my ($s,$min,$hr,$d,$m,$y) = (&date(0))[0,1,2,3,4,5];
             my $dateOffset = gmt_offset();
             my $date       = "$y-$m-$d $hr:$min:$s GMT $dateOffset";
-            
             # Write the report
             $return = &writeReport($refAnswer, $date);
-            
             # Feed logging database
             if ($winConfig->chLogActivate->Checked()) {
               # Set lookup string
@@ -5432,7 +5029,6 @@ sub btnWhois_Click
               &logRequest($item, \$dbhLog, $lookup, $date, $comment);
             }
           }
-          
           # Set report filename
           my $filename = $item;
           $filename =~ s/[\<\>\:\"\/\\\|\?\*]/_/g; # Replace unauthorized character by _
@@ -5442,61 +5038,52 @@ sub btnWhois_Click
             my $k = 1;
             while (-e $reportPath) {
               $k++;
-              $reportPath = "$targetDir\\$filename req$k\.html"; }
+              $reportPath = "$targetDir\\$filename req$k\.html";
+            }
           }
-          
           # Write report to file
           open(HTML,">$reportPath") or Win32::GUI::MessageBox($win, $STR{'errWritingReport'}.$!, $STR{'error'}, 0x40010);
           flock(HTML, 2);
           print HTML $return;
           close(HTML);
-          
           # Feed whois database
           my $refExtractedISP = &extractISPData($reportPath);
           my $result2log;
           foreach my $newISP (keys %{$refExtractedISP}) {
             my $lineInGrid;
-            
             if ($newISP) {
               # Fields ($newISP): 0 = Type (IPv4 or IPv6), 1 and 2 = range or cidr, 3 = ISP name, 4 = country, 5 = date
               my @fields = split(/\t/, $newISP);
-              
               # Check if ISP already exists in database
               my $response;
               if    ($fields[0] eq 'IPv4') { $response = &checkISP_IPv4(\$dbh, $fields[1], $fields[2]); }
               elsif ($fields[0] eq 'IPv6') { $response = &checkISP_IPv6(\$dbh, $fields[1]); }
               # Fields ($response): 0 = Type (IPv4 or IPv6), 1 and 2 = range or cidr, 3 = ISP name, 4 = country, 5 = date
-              
               # ISP exists, modify it ?
               if ($response) {
                 my @oldFields = split(/\t/, $response);
-                
                 # If option is Check After
                 if ($checkDBOpt == 3) {
                   my $oldISPStr = "$STR{'inDatabase'}:\n$STR{'ISP'}: $oldFields[3]\n$STR{'cbFilterField4'}: $oldFields[4]\n$STR{'date'}: $oldFields[5]";
                   my $newISPStr = "$STR{'current'}:\n$STR{'ISP'}: $fields[3]\n$STR{'cbFilterField4'}: $fields[4]\n$STR{'date'}: $fields[5]";
-                  
-                  # Yes (6), No (7), Cancel (2)
-                  $answer = Win32::GUI::MessageBox($win, "$STR{'item'} \xAB $item \xBB $STR{'wasFoundWhoisDB'}\n\n$oldISPStr\n\n$newISPStr\n\n$STR{'updateEntry'} ?", $STR{'checkWhois'}, 0x1023);
+                  $answer = Win32::GUI::MessageBox($win,
+                                                   "$STR{'item'} \xAB $item \xBB $STR{'wasFoundWhoisDB'}\n\n$oldISPStr\n\n$newISPStr\n\n$STR{'updateEntry'} ?",
+                                                   $STR{'checkWhois'},
+                                                   0x1023);
                   $winPb->SetForegroundWindow();
-                  
-                  # Cancel, finish all requests
+                  # Cancel (2), finish all requests
                   if ($answer == 2) {
                     &winPb_Terminate;
                     last;
-                  }
-
-                  # Answer is No, ignore this result and continue
-                  elsif ($answer == 7) { next; }
+                  # Answer is No (7), ignore this result and continue
+                  } elsif ($answer == 7) { next; }
                 }
-                
-                # Answer is Yes, modify entry
+                # Answer is Yes (6), modify entry
                 if ($checkDBOpt != 3 or $answer == 6) {
                   my $return = &modifyISP(\$dbh, \@fields);
                   if ($return) {
                     $lineInGrid = &modifyISPGrid(\@fields);
                     $nbrModified++;
-                    
                     # Store Network whois data
                     if ($winConfig->chDBCache->Checked() and exists($$refExtractedISP{$newISP}) and length($$refExtractedISP{$newISP}) > 1) {
                       &storeNWData($fields[1], $fields[2], \$$refExtractedISP{$newISP}, $lineInGrid);
@@ -5504,14 +5091,12 @@ sub btnWhois_Click
                   }
                 }
               }
-              
               # ISP doesn't exist, add it
               else {
                 my $return = &addISP(\$dbh, \@fields);
                 if ($return) {
                   $lineInGrid = &addISPGrid(\@fields);
                   $nbrAdded++;
-                  
                   # Store Network whois data
                   if ($winConfig->chDBCache->Checked() and exists($$refExtractedISP{$newISP}) and length($$refExtractedISP{$newISP}) > 1) {
                     &storeNWData($fields[1], $fields[2], \$$refExtractedISP{$newISP}, $lineInGrid);
@@ -5520,9 +5105,7 @@ sub btnWhois_Click
               }
             }
           }
-          
           $winPb->pbWinPb->StepIt();
-          
           # Show report depending on config
           if ((!$answer or $answer == 6) and $reportPath) {
             # Auto view reports in default HTML viewer
@@ -5530,21 +5113,17 @@ sub btnWhois_Click
               $win->ShellExecute('open', $reportPath,'','',1)
                 or Win32::GUI::MessageBox($win, $STR{'errViewingReport'}.Win32::GetLastError(), $STR{'error'}, 0x40010);
             }
-            # Auto view folder
-            if ($winConfig->chAutoViewDir->Checked()) { &btnOpenDir_Click; }
+            if ($winConfig->chAutoViewDir->Checked()) { &btnOpenDir_Click; } # Auto view folder
           }
         }
-        
         if ($dbh   ) { $dbh->disconnect();    }
         if ($dbhLog) { $dbhLog->disconnect(); }
-        
         # Turn off progress bar
         $winPb->lblPbCurr->Text('');
         $winPb->lblCount->Text('');
         $winPb->pbWinPb->SetPos(0);
         &winPb_Terminate;
         $win->ChangeCursor($ARROW);
-        
         # Refresh grid
         if ($nbrAdded) {
           $winDB->DBGrid->AutoSizeColumns();
@@ -5554,7 +5133,6 @@ sub btnWhois_Click
           $winDB->DBGrid->SortCells(0, 1, \&sortIP);
           $winDB->DBGrid->Refresh();
         }
-
         # Message
         my $nbrISP = $winDB->DBGrid->GetRows() - 1;
         my $msg;
@@ -5563,7 +5141,6 @@ sub btnWhois_Click
         $msg .= "$STR{'totalNumberISP'}: $nbrISP\n";
         $winDB->statusBar->Text(" $STR{'numberISP'}: ".$nbrISP);
         Win32::GUI::MessageBox($winDB, $msg, $STR{'winDB'}, 0x40040);
-        
       });
     }
   }
@@ -5580,7 +5157,6 @@ sub whoisReq
   my $domain;
   my %response;
   my $error = 0;
-  
   # If IP
   $item =~ s/ //g;
   if      ($type eq 'IPv4' or $type eq 'IPv6') {
@@ -5588,7 +5164,6 @@ sub whoisReq
   } elsif (my $extDom = $$refTLD->get_root_domain($item)) {
     $domain = $extDom;
   } else { $error = 1; }
-  
   if ($error != 1) {
     # Do main request
     $response{'query'} = $item;
@@ -5600,13 +5175,11 @@ sub whoisReq
       $response{'domain'.'1'} = $domain;
       &domainWhois($response{'query'}, 1, $domain, \%response, $refTLD, $refWSL);
     }
-    
     # Do secondary request
     my @resps;
     if (($isIP and ($win->chDomain->Checked())) or ($domain and ($win->chNetwork->Checked()))) {
       # NSlookup
       $winPb->lblPbCurr->Text("$response{'query'}: nslookup -> $item");
-      
       my $lookup = &nsLookup($response{'query'}, $type);
       if ($lookup =~ /, /) { @resps = split(/, /, $lookup); }
       else                 { push(@resps, $lookup);         }
@@ -5628,7 +5201,6 @@ sub whoisReq
         $i++;
       }
     }
-    
     # DNS Records
     if ($win->chDNS->Checked()) {
       my @host;
@@ -5638,7 +5210,6 @@ sub whoisReq
         if (@resps == 0) {
           # NSlookup
           $winPb->lblPbCurr->Text("$item: nslookup -> $item");
-          
           my $lookup = &nsLookup($item, $type);
           if ($lookup =~ /, /) { @host = split(/, /, $lookup); }
           else                 { push(@host, $lookup);         }
@@ -5646,7 +5217,6 @@ sub whoisReq
         } else { push(@host, @resps); }
       # Initial request was not an IP address
       } else { push(@host, $item); }
-      
       # Get DNS Infos
       my $j = 1;
       foreach my $domainHost (@host) {
@@ -5672,10 +5242,7 @@ sub whoisQuery
   # Local variables
   my $registry = shift;
   my $query    = shift;
-  
-  my $sock = IO::Socket::INET->new( PeerAddr => $registry,
-                                    PeerPort =>'43'      ,
-                                    Timeout  =>'60'      , );
+  my $sock     = IO::Socket::INET->new( PeerAddr => $registry, PeerPort =>'43', Timeout  =>'60');
   if ($sock) {
     print $sock "$query\n";
     my @response = <$sock>;
@@ -5700,7 +5267,6 @@ sub networkWhois
   my $tempResponse;
   my $search_options = ['NetName','OrgName'];
   my $authority;
-  
   # Find Authority
   if (!$win->cbWSSelect->GetCurSel()) {                     # Auto select registry
     my $whoisServer    = &registry($ip, $refIPv4, $refIPv6);
@@ -5709,7 +5275,6 @@ sub networkWhois
   } else {                                                  # Force registry
     $authority = $win->cbWSSelect->GetString($win->cbWSSelect->GetCurSel());
   }
-  
   # Whois to ARIN
   if ($authority eq 'ARIN') {
     $winPb->lblPbCurr->Text("$item: ARIN Network whois -> $ip");
@@ -5722,7 +5287,6 @@ sub networkWhois
       } 
     }
   }
-
   # Authority is RIPE
   if ($authority and $authority eq 'RIPE') {
     $winPb->lblPbCurr->Text("$item: RIPE Network whois -> $ip");
@@ -5736,7 +5300,6 @@ sub networkWhois
     $winPb->lblPbCurr->Text("$item: $authority Network whois -> $ip");
     $tempResponse = &whoisip_query($ip, $authority, 'true', 'true', $search_options);
   }
-  
   # For LACNIC, remove double line break
   if ($authority eq 'LACNIC') {
     my @tempResponse2;
@@ -5746,7 +5309,6 @@ sub networkWhois
     }
     $tempResponse = \@tempResponse2;
   }
-  
   # Keep responses
   $$refResponse{"networkAuth$i"}  = $authority;
   $$refResponse{"networkInfos$i"} = $tempResponse;
@@ -5762,13 +5324,11 @@ sub domainWhois
   my $whois_server;
   my $whois;
   my $server;
-
   # Determine the good server
   my $domainExt;
   if ($domainExt = $$refTLD->get_root_domain($domain)) {
     if (exists($$refWSL{$domainExt}{"host"})) { $whois_server = $$refWSL{$domainExt}{"host"}; }
   }
-  
   # Do whois
   $winPb->lblPbCurr->Text("$item: Domain whois -> $domain");
   if ($domainExt !~ /\.ar$/ and $domainExt !~ /\.pk$/ and $domainExt !~ /\.es$/) {
@@ -5801,7 +5361,6 @@ sub dnsRecords
   my @dnsRecords;
   my @IPaddresses;
   my @nservers;
-
   # NS Records
   my $res = Net::DNS::Resolver->new();
   my @listNSservers = $res->nameservers;
@@ -5825,7 +5384,6 @@ sub dnsRecords
     }
     $res->nameservers(@listNSservers);
     if (@nservers) {
-
       # Records for host
       if ($host ne $domain) {
         my $host_res     = Net::DNS::Resolver->new();
@@ -5837,33 +5395,26 @@ sub dnsRecords
           }
         }
       }
-      
       # A Records
       my $packet1   = $res->query($domain, 'A');
       if ($packet1) { foreach my $rr ($packet1->answer) { push(@dnsRecords, $rr->string); push(@IPaddresses, $rr->address); } }
-      
       # AAAA Records
       my $packet8   = $res->query($domain, 'AAAA');
       if ($packet8) { foreach my $rr ($packet8->answer) { push(@dnsRecords, $rr->string); } }
-      
       # MX Records
       my $packet2   = $res->query($domain, 'MX');
       if ($packet2) { foreach my $rr ($packet2->answer) { push(@dnsRecords, $rr->string); } }
-      
       # CNAME Records
       my $packet3   = $res->query($domain, 'CNAME');
       if ($packet3) { foreach my $rr ($packet3->answer) { push(@dnsRecords, $rr->string); } }
-      
       # TXT Records
       my $packet4   = $res->query($domain, 'TXT');
       if ($packet4) { foreach my $rr ($packet4->answer) { push(@dnsRecords, $rr->string); } }
       my $packet5   = $res->query("_domainkey.".$domain, 'TXT');
       if ($packet5) { foreach my $rr ($packet5->answer) { push(@dnsRecords, $rr->string); } }
-      
       # SOA Records
       my $packet6   = $res->query($domain, 'SOA');
       if ($packet6) { foreach my $rr ($packet6->answer) { push(@dnsRecords, $rr->string); } }
-      
       # PTR Records
       foreach my $ip (@IPaddresses) {
         my $res2      = Net::DNS::Resolver->new();
@@ -5874,7 +5425,6 @@ sub dnsRecords
       }
     }
   } else { return(''); }
-  
   # Sort records
   my @sdnsRecords = map  { $_->[0] }
                     sort { $a->[1] cmp $b->[1] }
@@ -5883,7 +5433,6 @@ sub dnsRecords
   @dnsRecords     = map  { $_->[0] }
                     sort { $b->[1] cmp $a->[1] }
                     map  { [ $_, (split(/\t/))[0] ] } @sdnsRecords;
-
   return(\@dnsRecords);
   
 }  #--- End dnsRecords
@@ -5895,7 +5444,6 @@ sub nsLookup
   # Local variables
   my($req, $type) = @_;
   my $resp;
-
   # Resolve IP address
   if ($type eq 'IPv4' or $type eq 'IPv6') {
     my $res = Net::DNS::Resolver->new;
@@ -5934,7 +5482,6 @@ sub nsLookup
       else                                       { $resp = $STR{'noMatch'};       }
     }
   }
-  
   return($resp);
   
 }  #--- End nsLookup
@@ -5945,7 +5492,6 @@ sub registry
 {
   # Local variables
   my ($ip, $refIPv4, $refIPv6) = @_;
-  
   # IPv4
   if ($ip =~ /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/) {
     my @partsIP  = split(/\./, $ip);
@@ -5958,9 +5504,7 @@ sub registry
       if (ip_in_range($ip, $range))   { return($$refIPv6{$range});    }
     }
   }
-  
-  # Not found
-  return(0);
+  return(0); # Not found
   
 }  #--- End registry
   
@@ -5972,7 +5516,6 @@ sub writeReport
   my ($refAnswer, $date) = @_;
   my $html;
   my $comment = $win->tfComment->Text();
-  
   # Server list
   my %authServers = ('ARIN'    => 'whois.arin.net'   ,
                      'RIPE'    => 'whois.ripe.net'   ,
@@ -5980,7 +5523,6 @@ sub writeReport
                      'LACNIC'  => 'whois.lacnic.net' ,
                      'AFRINIC' => 'whois.afrinic.net',
                      'KRNIC'   => 'whois.krnic.net'  ,);
-
   $html  = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">' . "\n";
   $html .= '<html>' . "\n";
   $html .= '<head>' . "\n";
@@ -6133,8 +5675,7 @@ sub storeNWData
   my $range_s    = shift;
   my $range_e    = shift;
   my $refNWData  = shift;
-  my $lineInGrid = shift;
-  
+  my $lineInGrid = shift;  
   # Replace not allowed characters for windows filename (IPv6)
   if ($range_s =~ /\:/) {
     my ($ipStart, $ipEnd) = split(/\-/, (Net::CIDR::cidr2range($range_s))[0]);
@@ -6144,7 +5685,6 @@ sub storeNWData
     $range_e = $ipEnd;
   }
   my $networkWhoisDataFile = "$CONFIG{'WHOIS_DATA_CACHE'}\\$range_s\-$range_e\.txt";
-  
   # Write Network whois data to file
   my @lines = split(/[\r\n]/, $$refNWData);
   open(HTML,">$networkWhoisDataFile") or Win32::GUI::MessageBox($win, $STR{'errWritingCache'}.$!, $STR{'error'}, 0x40010);
@@ -6159,7 +5699,6 @@ sub storeNWData
     }
   }
   close(HTML);
-  
   # Set background color to green in Grid
   if ($lineInGrid) {
     $winDB->DBGrid->SetCellBkColor($lineInGrid, 0, 0x33FF66);
@@ -6177,7 +5716,6 @@ sub logRequest
 {
   # Local variables
   my ($item, $refDbhLog, $details, $date, $comment) = @_;
-
   # Add entry in database
   # Database: table = LOGGING_DB, Fields = date, request, details, comment
   my $sth = $$refDbhLog->prepare("insert or replace into LOGGING_DB (date, request, details, comment) values(?,?,?,?)");
@@ -6197,7 +5735,6 @@ sub check_LoggingDB
   my ($item, $refDbhLog) = @_;
   my $nbrResults = 0;
   my @results;
-  
   # Check if item is present in database
   # Database: table = LOGGING_DB, Fields = date, request, details, comment
   my $sth = $$refDbhLog->prepare("SELECT date, request, details, comment from LOGGING_DB ORDER BY date DESC");
@@ -6288,7 +5825,6 @@ sub btnAbout_Click
                                               -resizable   => 0                         ,
                                               -dialogui    => 1                         , );
   $winAbout->SetIcon($winICO);
-  
   # About tab
   $winAbout->AddLabel(  -name        => 'lblLogo128'            ,
                         -size        => [128,128]               ,
@@ -6299,21 +5835,19 @@ sub btnAbout_Click
                         -size        => [ 90, 75]               ,
                         -pos         => [140, 10]               ,
                         -font        => $font10                 ,
-                        -foreground  => [0  , 0  , 102]         ,
                         -background  => [255, 255, 255]         ,
                         -text        => "$STR{'version'}:\n$STR{'website'}:\n$STR{'author'}:\n$STR{'translatedBy'}:", );
   $winAbout->AddLabel(  -name        => 'lblAbout2'             ,
                         -size        => [230, 75]               ,
                         -pos         => [235, 10]               ,
-                        -font        => $font10                 ,
-                        -foreground  => [185, 154,   0]         ,
+                        -font        => $font10b                ,
+                        -foreground  => [  90, 150, 255]        ,
                         -background  => [255, 255, 255]         ,
                         -text        => "$VERSION\nhttp://www.le-tools.com\nAlain Rioux (admin\@le-tools.com)\n$STR{'translatorName'}", );
   $winAbout->AddLabel(  -name        => 'lblAbout3'             ,
                         -size        => [300, 20]               ,
                         -pos         => [140, 80]               ,
                         -font        => $font10                 ,
-                        -foreground  => [0  , 0  , 102]         ,
                         -background  => [255, 255, 255]         ,
                         -text        => '© Copyright 2015-2016 Alain Rioux', );
   
@@ -6329,7 +5863,6 @@ sub time2Date
 {
   # Local variables
   my $unixtime = shift;
-  
   # Convert to string, local timezone
   my ($d,$m,$y) = (localtime($unixtime))[3,4,5];
   $y += 1900;
@@ -6346,7 +5879,6 @@ sub time2DateLong
 {
   # Local variables
   my $unixtime = shift;
-  
   # Convert to string, local timezone
   my ($s,$min,$h,$d,$m,$y) = (localtime($unixtime))[0,1,2,3,4,5];
   $y += 1900;
@@ -6366,11 +5898,9 @@ sub date
 {
   # Local variables
   my ($time) = @_;
-  
   # Conversion
   if (!$time or $time == 0) { $time = time; }
   my ($s,$min,$h,$d,$m,$y,$d_w,$ha,$isDST) = localtime($time);
-
   # Format
   $y += 1900;
   $m++;
@@ -6379,7 +5909,6 @@ sub date
   $h   = $h   < 10 ? $h   = "0".$h   : $h;
   $min = $min < 10 ? $min = "0".$min : $min;
   $s   = $s   < 10 ? $s   = "0".$s   : $s;
-  
   return($s,$min,$h,$d,$m,$y,$d_w,$ha,$isDST);
 
 }  #--- End date
@@ -6398,7 +5927,6 @@ sub updateAll
     $winPb->Hide();
     threads->exit();
   };
-  
   # Thread 'die' signal handler
   $SIG{__DIE__} = sub {
     my $errMsg = (split(/ at /,$_[0]))[0];
@@ -6412,17 +5940,12 @@ sub updateAll
     $winPb->Hide();
     Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $errMsg", $STR{'error'}, 0x40010);
   };
-  
-  # Update Tool ?
-  if ($CONFIG{'TOOL_AUTO_UPDATE'})    { &updateTool(0);   }
-  # Update TLDDB ?
-  if ($CONFIG{'TLD_DB_AUTO_UPDATE'} ) { &updateTLDDB(0);  }
-  # Update Whois Server DB ?
-  if ($CONFIG{'WS_DB_AUTO_UPDATE'}  ) { &updateWSDB(0);   }
-  # Update IPv4 DB ?
-  if ($CONFIG{'IPv4_DB_AUTO_UPDATE'}) { &updateIPv4DB(0); }
-  # Update IPv6 DB ?
-  if ($CONFIG{'IPv6_DB_AUTO_UPDATE'}) { &updateIPv6DB(0); }
+  sleep(1);
+  if ($CONFIG{'TOOL_AUTO_UPDATE'})    { &updateTool(0);   } # Update Tool ?
+  if ($CONFIG{'TLD_DB_AUTO_UPDATE'} ) { &updateTLDDB(0);  } # Update TLDDB ?
+  if ($CONFIG{'WS_DB_AUTO_UPDATE'}  ) { &updateWSDB(0);   } # Update Whois Server DB ?
+  if ($CONFIG{'IPv4_DB_AUTO_UPDATE'}) { &updateIPv4DB(0); } # Update IPv4 DB ?
+  if ($CONFIG{'IPv6_DB_AUTO_UPDATE'}) { &updateIPv6DB(0); } # Update IPv6 DB ?
   
 }  #--- End updateAll
 
@@ -6443,7 +5966,6 @@ sub createCW
                                           -resizable   => 0                         ,
                                           -dialogui    => 1                         , );
   $winCW->SetIcon($winICO);
-  
   $winCW->AddLabel(     -name        => 'lblConfigLogo'       ,
                         -size        => [128,128]             ,
                         -pos         => [  0,  5]             ,
@@ -6596,7 +6118,6 @@ sub createCW
                         -bitmap      => $errorBmp             ,
                         -background  => [255, 255, 255]       ,
                         -visible     => 0                     , );
-  
   return(\$winCW);
 
 }  #--- End createCW
@@ -6607,7 +6128,6 @@ sub firstStart
 {
   # Local variables
   my $refWinCW = shift;
-  
   # Thread 'cancellation' signal handler
   $SIG{'KILL'} = sub {
     $win->ChangeCursor($ARROW);
@@ -6620,7 +6140,6 @@ sub firstStart
     Win32::GUI::MessageBox($win, $STR{'configSetPart'}, "XL-Whois $VERSION", 0x40040);
     threads->exit();
   };
-  
   # Thread 'die' signal handler
   $SIG{__DIE__} = sub {
     my $errMsg = (split(/ at /,$_[0]))[0];
@@ -6635,16 +6154,12 @@ sub firstStart
     $$refWinCW->Hide();
     Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $errMsg", $STR{'error'}, 0x40010);
   };
-  
-  # Yes (6), No (7)
   my $answer = Win32::GUI::MessageBox($win, $STR{'firstUse'}, $STR{'config'}, 0x1024);
-  
+  # Yes (6), No (7)
   if ($answer == 6) {
     my $dir;
-    
     # Use default directory ? (program directory)
     $answer = Win32::GUI::MessageBox($win, $STR{'defaultDir'}.'('.$USERDIR.') ?', $STR{'config'}, 0x1024);
-    
     # Answer is no, open popup to let user choose a different location
     if ($answer == 7) {
       # Select a folder
@@ -6655,13 +6170,11 @@ sub firstStart
                                           -directory  => $USERDIR                 , );
     # Answer is yes, use default dir
     } else { $dir = $USERDIR; }
-    
     # Selected folder
     if ($dir and -d $dir) {
       $$refWinCW->Top($win->Top()+5);
       $$refWinCW->Left($win->Left()+310);
       $$refWinCW->Show();
-      
       # Configuring General Options
       $$refWinCW->lblSetGenOpt->Show();
       # Tool
@@ -6683,7 +6196,6 @@ sub firstStart
       $CONFIG{'OPT_DOMAIN_NAME'} = 1;
       $$refWinCW->lblSetGenOptDone->Show();
       &saveConfig(\%CONFIG);
-
       # Configuring Storage
       # Folder for Report
       $$refWinCW->lblReportFolder->Show();
@@ -6701,7 +6213,6 @@ sub firstStart
       $CONFIG{'AUTO_VIEW_DIR'}  = 0;
       &saveConfig(\%CONFIG);
       $$refWinCW->lblReportFolderDone->Show();
-      
       # Create Logging Database
       $$refWinCW->lblLoggingDB->Show();
       my $logDbFile = "$dir\\Logging.db";
@@ -6723,7 +6234,6 @@ sub firstStart
         Win32::GUI::MessageBox($$refWinCW, $STR{'errCreatingLoggingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
       }
       &saveConfig(\%CONFIG);
-      
       # Create Whois Database
       $return = 0;
       $$refWinCW->lblWhoisDB->Show();
@@ -6744,7 +6254,6 @@ sub firstStart
         Win32::GUI::MessageBox($$refWinCW, $STR{'errCreatingWhoisDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
       }
       &saveConfig(\%CONFIG);
-      
       # Configuring Databases
       # Download TLD Database
       $$refWinCW->lblDLTLDDB->Show();
@@ -6752,13 +6261,10 @@ sub firstStart
       if ($return) { # Error
         $$refWinCW->lblDLTLDDBError->Show();
         Win32::GUI::MessageBox($$refWinCW, "$STR{'errorMsg'}: $return", $STR{'error'}, 0x40010);
-      } else { # Success
-        $$refWinCW->lblDLTLDDBDone->Show();
-      }
+      } else { $$refWinCW->lblDLTLDDBDone->Show(); } # Success
       $winConfig->chTLDDBAutoUpt->Checked(1); # Set auto update for TLD Database
       $CONFIG{'TLD_DB_AUTO_UPDATE'} = 1;
       &saveConfig(\%CONFIG);
-      
       # Download Whois Server Database
       $$refWinCW->lblDLWSDB->Show();
       $return = &downloadWSDB(0, "$dir\\tld.json");
@@ -6771,7 +6277,6 @@ sub firstStart
       $winConfig->chWSDBAutoUpt->Checked(1); # Set auto update for Whois Server Database
       $CONFIG{'WS_DB_AUTO_UPDATE'} = 1;
       &saveConfig(\%CONFIG);
-      
       # Download IPv4 Database
       $$refWinCW->lblDLIPv4DB->Show();
       $return = &downloadIPv4DB(0, "$dir\\ipv4-address-space.csv");
@@ -6784,7 +6289,6 @@ sub firstStart
       $winConfig->chIPv4DBAutoUpt->Checked(1); # Set auto update for IPv4 Database
       $CONFIG{'IPv4_DB_AUTO_UPDATE'} = 1;
       &saveConfig(\%CONFIG);
-      
       # Download IPv6 Database
       $$refWinCW->lblDLIPv6DB->Show();
       $return = &downloadIPv6DB(0, "$dir\\ipv6-unicast-address-assignments.csv");
@@ -6797,12 +6301,10 @@ sub firstStart
       $winConfig->chIPv6DBAutoUpt->Checked(1); # Set auto update for IPv6 Database
       $CONFIG{'IPv6_DB_AUTO_UPDATE'} = 1;
       &saveConfig(\%CONFIG);
-  
       &isWhoisReady(0);
       sleep(1);
       $$refWinCW->Hide(); # Close Configuration Wizard
       $win->ChangeCursor($ARROW);
-      
       # Send a test ? (program directory)
       $answer = Win32::GUI::MessageBox($win, $STR{'defaultConfigSet'}, $STR{'config'}, 0x41024);
       if ($answer == 6) {
@@ -6826,7 +6328,6 @@ sub btnWinConfig_Click
   # Show Config window with General Tab
   $winConfig->configTab->SetCurSel(0);
   &configTab_Click;
-  
   $winConfig->Center();
   $winConfig->DoModal();
 
@@ -6907,7 +6408,6 @@ sub configTab_Click
     $winConfig->tfIPv6DB->Hide();
     $winConfig->btnIPv6DB->Hide();
     $winConfig->btnIPv6DBUpt->Hide();
-    
   # Show Storage tab
   } elsif ($winConfig->configTab->SelectedItem() == 1) {
     # General tab
@@ -6988,7 +6488,6 @@ sub configTab_Click
     $winConfig->tfIPv6DB->Hide();
     $winConfig->btnIPv6DB->Hide();
     $winConfig->btnIPv6DBUpt->Hide();
-  
   # Show Databases tab
   } elsif ($winConfig->configTab->SelectedItem() == 2) {
     # General tab
@@ -7074,12 +6573,8 @@ sub configTab_Click
 }  #--- End configTab_Click
 
 #--------------------------#
-sub btnCheckUpdate_Click
+sub btnCheckUpdate_Click { &updateTool(1); }
 #--------------------------#
-{
-  &updateTool(1);
-
-}  #--- End btnCheckUpdate_Click
 
 #--------------------------#
 sub updateTool
@@ -7087,7 +6582,6 @@ sub updateTool
 {
   # Local variables
   my $confirm = shift;
-  
   # Download the version file  
   my $ua = new LWP::UserAgent;
   $ua->agent($CONFIG{'USERAGENT'});
@@ -7114,12 +6608,7 @@ sub updateTool
       }
     }
   }
-  # Error 
-  else {
-    if ($confirm) {
-      Win32::GUI::MessageBox($winConfig, $STR{'errConnection'}.': '.$res->status_line, $STR{'error'},0x40010);
-    }
-  }
+  elsif ($confirm) { Win32::GUI::MessageBox($winConfig, $STR{'errConnection'}.': '.$res->status_line, $STR{'error'},0x40010); } # Error
 
 }  #--- End updateTool
 
@@ -7164,8 +6653,6 @@ sub chIPv4_Click
     $CONFIG{'OPT_IPv4'} = 0;
     &saveConfig(\%CONFIG);
   }
-  
-  # Ready ?
   &isWhoisReady(0);
 
 }  #--- End chIPv4_Click
@@ -7182,8 +6669,6 @@ sub chIPv6_Click
     $CONFIG{'OPT_IPv6'} = 0;
     &saveConfig(\%CONFIG);
   }
-  
-  # Ready ?
   &isWhoisReady(0);
 
 }  #--- End chIPv6_Click
@@ -7200,8 +6685,6 @@ sub chHostname_Click
     $CONFIG{'OPT_HOSTNAME'} = 0;
     &saveConfig(\%CONFIG);
   }
-  
-  # Ready ?
   &isWhoisReady(0);
 
 }  #--- End chHostname_Click
@@ -7218,8 +6701,6 @@ sub chDomainName_Click
     $CONFIG{'OPT_DOMAIN_NAME'} = 0;
     &saveConfig(\%CONFIG);
   }
-  
-  # Ready ?
   &isWhoisReady(0);
 
 }  #--- End chDomainName_Click
@@ -7245,7 +6726,6 @@ sub tfLookupTO_Change
 {
   # Local variables
   my $lookupTO = $winConfig->tfLookupTO->Text();
-  
   # Remember
   if ($lookupTO) {
     $CONFIG{'NSLOOKUP_TIMEOUT'} = $lookupTO;
@@ -7260,7 +6740,6 @@ sub tfUserAgent_Change
 {
   # Local variables
   my $userAgent = $winConfig->tfUserAgent->Text();
-  
   # Remember
   if ($userAgent) {
     $CONFIG{'USERAGENT'} = $userAgent;
@@ -7290,7 +6769,6 @@ sub tfMaxView_Change
 {
   # Local variables
   my $maxView = $winConfig->tfMaxView->Text();
-  
   # Remember
   if ($maxView) {
       $CONFIG{'MAX_VIEW'} = $maxView;
@@ -7305,7 +6783,6 @@ sub tfReportDir_Change
 {
   # Local variables
   my $saveDir = $winConfig->tfReportDir->Text();
-  
   # Remember
   if ($saveDir and -d $saveDir) {
     $CONFIG{'DIR_REPORT'} = $saveDir;
@@ -7318,8 +6795,6 @@ sub tfReportDir_Change
       if ($START == 1) { Win32::GUI::MessageBox($winConfig, $STR{'errNoValidFile'}, $STR{'error'}, 0x40010); }
     }
   }
-  
-  # Ready ?
   if ($START == 1) { &isWhoisReady(0); }
 
 }  #--- End tfReportDir_Change
@@ -7331,7 +6806,6 @@ sub btnReportDir_Click
   # Local variables
   my $lastDir = $winConfig->tfReportDir->Text();
   my $dir;
-
   # Show BrowseForFolder dialog window
   if ($lastDir) {
     my(@parts) = split(/\\/, $lastDir);
@@ -7349,14 +6823,11 @@ sub btnReportDir_Click
                                         -folderonly => 1                      ,
                                         -newui      => 1                      , );
   }
-
   # Selected folder
   if ($dir and -d $dir) {
     if ($dir =~ /\\$/) { chop($dir); }
     $winConfig->tfReportDir->Text($dir);
   }
-  
-  # Ready ?
   &isWhoisReady(0);
   
 }  #--- End btnReportDir_Click
@@ -7367,7 +6838,6 @@ sub btnOpenDir_Click
 {
   # Local variables
   my $outputDir = $winConfig->tfReportDir->Text();
-  
   if (-d $outputDir) {
     # Open Window Explorer
     Win32::Process::Create(my $ProcessObj                 ,
@@ -7433,7 +6903,6 @@ sub tfLogDbFile_Change
 {
   # Local variables
   my $dbLogFile = $winConfig->tfLogDbFile->Text();
-  
   # Remember
   if ($dbLogFile and -f $dbLogFile) {
     # Reload Logging Database
@@ -7472,7 +6941,6 @@ sub tfLogDbFile_Change
       $winConfig->tfLogDbFile->Text('');
       if ($START == 1) { Win32::GUI::MessageBox($winConfig, $STR{'errNoValidFile'}, $STR{'error'}, 0x40010); }
     }
-    # Ready ?
     if ($START == 1) { &isWhoisReady(0); }
   }
 
@@ -7485,7 +6953,6 @@ sub btnLogDbFile_Click
   # Local variables
   my $lastDir = $winConfig->tfLogDbFile->Text();
   my $logDbFile;
-
   # Show OpenFile dialog window
   if ($lastDir) {
     my(@parts) = split(/\\/, $lastDir);
@@ -7505,7 +6972,6 @@ sub btnLogDbFile_Click
                                               -filemustexist => 1                           ,
                                               -explorer      => 1                           , );
   }
-
   # Selected file
   if ($logDbFile and -f $logDbFile) { $winConfig->tfLogDbFile->Text($logDbFile); }
 
@@ -7515,14 +6981,13 @@ sub btnLogDbFile_Click
 sub btnLogDbFileNew_Click
 #--------------------------#
 {
-  my $logDbFile = Win32::GUI::GetOpenFileName(-owner            => $winConfig           ,
+  my $logDbFile = Win32::GUI::GetOpenFileName(-owner            => $winConfig             ,
                                               -title            => $STR{'btnLogDbFileNew'},
                                               -defaultfilter    => 0              ,
                                               -directory        => $USERDIR       ,
                                               -file             => 'Logging.db'   ,
                                               -defaultextension => 'db'           ,
                                               -explorer         => 1              , );
-
   # Selected file
   if ($logDbFile) {
     # Create a new Logging Database
@@ -7531,10 +6996,7 @@ sub btnLogDbFileNew_Click
     if ($return) {
       $winConfig->tfLogDbFile->Text($logDbFile);
       Win32::GUI::MessageBox($winConfig, $STR{'dbCreated'}, $STR{'winLogDB'}, 0x40040);
-    # Error
-    } else {    
-      Win32::GUI::MessageBox($winConfig, $STR{'errCreatingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
-    }
+    } else { Win32::GUI::MessageBox($winConfig, $STR{'errCreatingDB'}.$DBI::errstr, $STR{'error'}, 0x40010); } # Error
   }
 
 }  #--- End btnLogDbFileNew_Click
@@ -7545,11 +7007,9 @@ sub createLoggingDB
 {
   # Local variables
   my $logDbFile = shift;
-  
   # Create a new database
   my $dsn = "DBI:SQLite:dbname=$logDbFile";
   my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 }) or return(0);
-
   # Create main table
   my $stmt = qq(CREATE TABLE IF NOT EXISTS LOGGING_DB
                 (date       DATE          NOT NULL,
@@ -7570,7 +7030,6 @@ sub btnLogDbView_Click
 {
   # Local variables
   my $logDbFile = $winConfig->tfLogDbFile->Text();
-  
   # Database must exist
   if ($logDbFile and -f $logDbFile) {
     # Load Whois Database
@@ -7578,9 +7037,7 @@ sub btnLogDbView_Click
     # Show Window
     $winLogDB->Center($winConfig);
     $winLogDB->DoModal();
-  } else {
-    Win32::GUI::MessageBox($winConfig, $STR{'errNoDB'}, $STR{'error'}, 0x40010);
-  }
+  } else { Win32::GUI::MessageBox($winConfig, $STR{'errNoDB'}, $STR{'error'}, 0x40010); }
   return(1);
 
 }  #--- End btnLogDbView_Click
@@ -7607,7 +7064,6 @@ sub tfDbFile_Change
   # Local variables
   my $dbFile = $winConfig->tfDbFile->Text();
   my $networkWhoisCacheDir;
-  
   # Set Network Whois Data cache folder
   if ($dbFile) {
     my $whoisDir = $dbFile; # Same folder of Whois Database
@@ -7616,7 +7072,6 @@ sub tfDbFile_Change
     $networkWhoisCacheDir = $whoisDir. 'cache';
     $CONFIG{'WHOIS_DATA_CACHE'} = $networkWhoisCacheDir;
   }
-  
   # Remember
   if ($dbFile and -f $dbFile) {
     # Reload Whois Database
@@ -7635,7 +7090,6 @@ sub tfDbFile_Change
         &saveConfig(\%CONFIG);
         $winConfig->tfDbFile->Text('');
       }
-      # Ready ?
       if ($START == 1) { &isWhoisReady(0); }
     });
   } else { # Invalid file or no file
@@ -7650,7 +7104,6 @@ sub tfDbFile_Change
       $winConfig->tfDbFile->Text('');
       if ($START == 1) { Win32::GUI::MessageBox($winConfig, $STR{'errNoValidFile'}, $STR{'error'}, 0x40010); }
     }
-    # Ready ?
     if ($START == 1) { &isWhoisReady(0); }
   }
 
@@ -7663,7 +7116,6 @@ sub btnDbFile_Click
   # Local variables
   my $lastDir = $winConfig->tfDbFile->Text();
   my $dbFile;
-
   # Show OpenFile dialog window
   if ($lastDir) {
     my(@parts) = split(/\\/, $lastDir);
@@ -7685,11 +7137,8 @@ sub btnDbFile_Click
                                             -filemustexist => 1                       ,
                                             -explorer      => 1                       , );
   }
-
   # Selected file
   if ($dbFile and -f $dbFile) { $winConfig->tfDbFile->Text($dbFile); }
-
-  # Ready ?
   &isWhoisReady(0);
 
 }  #--- End btnDbFile_Click
@@ -7705,7 +7154,6 @@ sub btnDbFileNew_Click
                                             -file             => 'Whois.db'          ,
                                             -defaultextension => 'db'                ,
                                             -explorer         => 1                   , );
-
   # Selected file
   if ($dbFile) {
     # Create a new database
@@ -7714,13 +7162,8 @@ sub btnDbFileNew_Click
     if ($return) {
       $winConfig->tfDbFile->Text($dbFile);
       Win32::GUI::MessageBox($winConfig, $STR{'dbCreated'}, $STR{'winDB'}, 0x40040);
-    # Error
-    } else {    
-      Win32::GUI::MessageBox($winConfig, $STR{'errCreatingDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
-    }
+    } else { Win32::GUI::MessageBox($winConfig, $STR{'errCreatingDB'}.$DBI::errstr, $STR{'error'}, 0x40010); } # Error
   }
-
-  # Ready ?
   &isWhoisReady(0);
 
 }  #--- End btnDbFileNew_Click
@@ -7731,11 +7174,9 @@ sub createWhoisDB
 {
   # Local variables
   my $dbFile = shift;
-
   # Create a new database
   my $dsn = "DBI:SQLite:dbname=$dbFile";
   my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 }) or return(0);
-  
   # Create main table
   my $stmt = qq(CREATE TABLE IF NOT EXISTS WHOIS_DB
                 (range_s    INT           NOT NULL,
@@ -7747,14 +7188,12 @@ sub createWhoisDB
   my $rv = $dbh->do($stmt);
   if ($rv < 0) { return(0); }
   $dbh->disconnect();
-  
   # Add header to the grid
   $winDB->DBGrid->SetCellText(0, 0, $STR{'cbFilterField1'});
   $winDB->DBGrid->SetCellText(0, 1, $STR{'cbFilterField2'});
   $winDB->DBGrid->SetCellText(0, 2, $STR{'cbFilterField3'});
   $winDB->DBGrid->SetCellText(0, 3, $STR{'cbFilterField4'});
   $winDB->DBGrid->SetCellText(0, 4, $STR{'date'});
-
   return(1);
   
 }  #--- End createWhoisDB
@@ -7765,7 +7204,6 @@ sub createWhoisDB_IPV6
 {
   # Local variables
   my $refDbh = shift;
-
   # Create a the WHOIS_DB_6 table
   my $stmt = qq(CREATE TABLE IF NOT EXISTS WHOIS_DB_6
                 (ipv6_range   VARCHAR(255)  NOT NULL,
@@ -7774,13 +7212,6 @@ sub createWhoisDB_IPV6
                  date         INT           NOT NULL,
                  PRIMARY KEY (ipv6_range)));
   my $rv = $$refDbh->do($stmt);
-  
-  ## Add header to the grid
-  #$winDB->DBGrid->SetCellText(0, 0, $STR{'cbFilterField1'});
-  #$winDB->DBGrid->SetCellText(0, 1, $STR{'cbFilterField2'});
-  #$winDB->DBGrid->SetCellText(0, 2, $STR{'cbFilterField3'});
-  #$winDB->DBGrid->SetCellText(0, 3, $STR{'cbFilterField4'});
-  #$winDB->DBGrid->SetCellText(0, 4, $STR{'date'});
   
 }  #--- End createWhoisDB_IPV6
 
@@ -7793,9 +7224,7 @@ sub btnWhoisDbView_Click
   if ($whoisDB and -f $whoisDB) {
     $winDB->Center($winConfig);
     $winDB->DoModal();
-  } else {
-    Win32::GUI::MessageBox($winConfig, $STR{'errNoDB'}, $STR{'error'}, 0x40010);
-  }
+  } else { Win32::GUI::MessageBox($winConfig, $STR{'errNoDB'}, $STR{'error'}, 0x40010); }
   return(1);
 
 }  #--- End btnWhoisDbView_Click
@@ -7821,7 +7250,6 @@ sub tfTLDDB_Change
 {
   # Local variables
   my $TLDdbFile = $winConfig->tfTLDDB->Text();
-  
   # Remember
   if ($TLDdbFile and -f $TLDdbFile and &validTLDDB($TLDdbFile)) {
     $CONFIG{'TLD_DB_FILE'} = $TLDdbFile;
@@ -7841,12 +7269,9 @@ sub tfTLDDB_Change
 sub validTLDDB
 #--------------------------#
 {
-  # Local variables
   my $TLDdbFile = shift;
-  
   $TLDDB = Domain::PublicSuffix->new({ 'data_file' => $TLDdbFile });
   if ($TLDDB->get_root_domain('www.google.com')) { return(1); }
-  
   return(0);
   
 }  #--- End validTLDDB
@@ -7858,7 +7283,6 @@ sub btnTLDDB_Click
   # Local variables
   my $lastDir = $winConfig->tfTLDDB->Text();
   my $TLDdbFile;
-
   # Show OpenFile dialog window
   if ($lastDir) {
     my(@parts) = split(/\\/, $lastDir);
@@ -7880,7 +7304,6 @@ sub btnTLDDB_Click
                                               -file          => 'effective_tld_names.dat' ,
                                               -explorer      => 1                         , );
   }
-
   # Selected file
   if ($TLDdbFile and -f $TLDdbFile) { $winConfig->tfTLDDB->Text($TLDdbFile); }
 
@@ -7916,7 +7339,6 @@ sub tfWSDB_Change
 {
   # Local variables
   my $WSdbFile = $winConfig->tfWSDB->Text();
-  
   # Remember
   if ($WSdbFile and -f $WSdbFile and &validWSDB($WSdbFile)) {
     $CONFIG{'WS_DB_FILE'} = $WSdbFile;
@@ -7936,14 +7358,9 @@ sub tfWSDB_Change
 sub validWSDB
 #--------------------------#
 {
-  # Local variables
   my $WSdbFile = shift;
-  
   eval { json_file_to_perl($WSdbFile); };
-  if (!$@) {
-    return(1);
-  }
-  
+  if (!$@) { return(1); }
   return(0);
   
 }  #--- End validWSDB
@@ -7955,7 +7372,6 @@ sub btnWSDB_Click
   # Local variables
   my $lastDir = $winConfig->tfWSDB->Text();
   my $WSdbFile;
-
   # Show OpenFile dialog window
   if ($lastDir) {
     my(@parts) = split(/\\/, $lastDir);
@@ -7977,7 +7393,6 @@ sub btnWSDB_Click
                                               -file          => 'tld.json'            ,
                                               -explorer      => 1                     , );
   }
-
   # Selected file
   if ($WSdbFile and -f $WSdbFile) { $winConfig->tfWSDB->Text($WSdbFile); }
 
@@ -8013,7 +7428,6 @@ sub tfIPv4DB_Change
 {
   # Local variables
   my $IPv4dbFile = $winConfig->tfIPv4DB->Text();
-  
   # Remember
   if ($IPv4dbFile and -f $IPv4dbFile and &validIPv4DB($IPv4dbFile)) {
     $CONFIG{'IPv4_DB_FILE'} = $IPv4dbFile;
@@ -8037,7 +7451,6 @@ sub validIPv4DB
   my $IPv4dbFile = shift;
   my $first;
   my $second;
-  
   # Open IPv4 CSV file and read first two lines
   if (open(my $IPv4_CSV, '<', $IPv4dbFile)) {
     while( my $line = <$IPv4_CSV>)  {
@@ -8047,7 +7460,6 @@ sub validIPv4DB
     close $IPv4_CSV;
     if ($first =~ /^Prefix,/ and $second =~ /^\d{3}\//) { return(1); }
   }
-  
   return(0);
 
 }  #--- End validIPv4DB
@@ -8060,12 +7472,10 @@ sub loadIPv4DB
   my $refIPv4    = shift;
   my $IPv4dbFile = $winConfig->tfIPv4DB->Text();
   %{$refIPv4} = ();
-  
   # Open IPv4 CSV file
   open(IPV4, $IPv4dbFile) or Win32::GUI::MessageBox($win, $STR{'errReading'}.$!, $STR{'error'},0x40010);
   my @tab = <IPV4>;
   close(IPV4);
-  
   # Store data in memory
   my $header = shift(@tab);
   if ($header =~ /^Prefix,/) {
@@ -8088,7 +7498,6 @@ sub btnIPv4DB_Click
   # Local variables
   my $lastDir = $winConfig->tfIPv4DB->Text();
   my $IPv4dbFile;
-
   # Show OpenFile dialog window
   if ($lastDir) {
     my(@parts) = split(/\\/, $lastDir);
@@ -8110,7 +7519,6 @@ sub btnIPv4DB_Click
                                               -file          => 'ipv4-address-space.csv'  ,
                                               -explorer      => 1                         , );
   }
-
   # Selected file
   if ($IPv4dbFile and -f $IPv4dbFile) { $winConfig->tfIPv4DB->Text($IPv4dbFile); }
 
@@ -8146,7 +7554,6 @@ sub tfIPv6DB_Change
 {
   # Local variables
   my $IPv6dbFile = $winConfig->tfIPv6DB->Text();
-  
   # Remember
   if ($IPv6dbFile and -f $IPv6dbFile and &validIPv6DB($IPv6dbFile)) {
     $CONFIG{'IPv6_DB_FILE'} = $IPv6dbFile;
@@ -8170,7 +7577,6 @@ sub validIPv6DB
   my $IPv6dbFile = shift;
   my $first;
   my $second;
-  
   # Open IPv6 CSV file and read first two lines
   if (open(my $IPv6_CSV, '<', $IPv6dbFile)) {
     while( my $line = <$IPv6_CSV>)  {
@@ -8180,7 +7586,6 @@ sub validIPv6DB
     close $IPv6_CSV;
     if ($first =~ /^Prefix,/ and $second =~ /^\d{4}\:/) { return(1); }
   }
-  
   return(0);
 
 }  #--- End validIPv6DB
@@ -8193,12 +7598,10 @@ sub loadIPv6DB
   my $refIPv6    = shift;
   my $IPv6dbFile = $winConfig->tfIPv6DB->Text();
   %{$refIPv6} = ();
-  
   # Open IPv6 CSV file
   open(IPV6, $IPv6dbFile) or Win32::GUI::MessageBox($win, $STR{'errReading'}.$!, $STR{'error'},0x40010);
   my @tab = <IPV6>;
   close(IPV6);
-  
   # Store data in memory
   my $header = shift(@tab);
   if ($header =~ /^Prefix,/) {
@@ -8220,7 +7623,6 @@ sub btnIPv6DB_Click
   # Local variables
   my $lastDir = $winConfig->tfIPv6DB->Text();
   my $IPv6dbFile;
-
   # Show OpenFile dialog window
   if ($lastDir) {
     my(@parts) = split(/\\/, $lastDir);
@@ -8242,7 +7644,6 @@ sub btnIPv6DB_Click
                                               -file          => 'ipv6-unicast-address-assignments.csv'  ,
                                               -explorer      => 1                                       , );
   }
-
   # Selected file
   if ($IPv6dbFile and -f $IPv6dbFile) { $winConfig->tfIPv6DB->Text($IPv6dbFile); }
 
@@ -8263,7 +7664,6 @@ sub updateTLDDB
 {
   # Local variables
 	my $confirm = shift;
-  
   my ($upToDate, $return, $dateLocalFile, $dateRemoteFile) = &checkDateTLDDB($confirm);
   # Values for $upToDate
   # 0: Whois Server Database doesn't exist  
@@ -8271,7 +7671,6 @@ sub updateTLDDB
   # 2: Database is outdated
   # 3: Error connection
   # 4: Unknown error
-
   # TLD Database is outdated or doesn't exist
   if (!$upToDate or $upToDate == 2) {
     my $msg;
@@ -8279,16 +7678,11 @@ sub updateTLDDB
       Encode::from_to($dateRemoteFile, 'utf8', 'iso-8859-1');
       $msg = "$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} publicsuffix.org: $dateRemoteFile\n\n$STR{'updateAvailable'} ?";
     } else { $msg = "$STR{'TLDDBNotExist'} ?"; }
-    
-    # Yes (6), No (7)
     my $answer = Win32::GUI::MessageBox($win, $msg, $STR{'updateTLDDB'}, 0x1024);
-    
-    # Answer is No
+    # Answer is No (7)
     if ($answer == 7) { return(0); }
-    
-    # Answer is Yes, download the update
+    # Answer is Yes (6), download the update
     else { &downloadTLDDB(1, $winConfig->tfTLDDB->Text()); }
-    
   # TLDDB is up to date, show message if $confirm == 1
   } elsif ($upToDate == 1) {
     if ($confirm) {
@@ -8312,15 +7706,12 @@ sub checkDateTLDDB
   my ($confirm)   = @_;
   my $localTLDDB  = $winConfig->tfTLDDB->Text();
   my $lastModifDate;
-  
   # TLD Database doesn't exist or invalid file
   if (!$localTLDDB or !-f $localTLDDB) { return(0, undef, undef, undef); }
-  
   # Check date of local file
   my $dateTLDDB       = (stat($localTLDDB))[9];
   my ($dl, $ml, $yl)  = (&date($dateTLDDB))[3,4,5];
   my $dateLocalFile   = "$yl-$ml-$dl";
-
   # Check date of the remote file
   my $ua = new LWP::UserAgent;
   $ua->agent($CONFIG{'USERAGENT'});
@@ -8333,7 +7724,6 @@ sub checkDateTLDDB
     $lastModifDate = $res->header('last-modified');
     $TOTAL_SIZE    = $res->header('content_length');
   } else { return(3, $return, undef, undef); } # Error connection
-  
   # Compare local et remote file date
   if ($lastModifDate and my ($y, $m, $d) = parse_date($lastModifDate)) { # Parse date
     my $dateUpt = sprintf("%4d-%02d-%02d", $y, $m, $d);
@@ -8358,13 +7748,11 @@ sub downloadTLDDB
   my $confirm    = shift; # If $confirm == 1, show status in a popup, else return status
   my $localTLDDB = shift; # Local filepath
   if (!$localTLDDB) { $localTLDDB = "$USERDIR\\effective_tld_names.dat"; } # Default location
-
   # Start an agent
   my $ua = new LWP::UserAgent;
   $ua->agent($CONFIG{'USERAGENT'});
   #$ua->timeout($CONFIG{'NSLOOKUP_TIMEOUT'});
   $ua->default_header('Accept-Language' => 'en');
-  
   # Set the progress bar
   $win->ChangeCursor($HOURGLASS);
   $winPb->lblPbCurr->Text($STR{'connecting'}.' publicsuffix.org...');
@@ -8374,7 +7762,6 @@ sub downloadTLDDB
   $winPb->pbWinPb->SetStep(1);
   $winPb->Center($win);
   $winPb->Show();
-  
   # Check size of the remote file
   if (!$TOTAL_SIZE) {
     my $req    = new HTTP::Request HEAD => $TLDDB_URL;
@@ -8393,26 +7780,21 @@ sub downloadTLDDB
       } else { return($STR{'errConnection'}); }
     }
   }
-  
   # Download the file
   if ($TOTAL_SIZE) {
     my $downloadData;
-    
     # Download the file
     $winPb->Text($STR{'downloadTLDDB'}.'...');
     $winPb->lblPbCurr->Text($STR{'downloadTLDDB'}.'...');
     my $response = $ua->get($TLDDB_URL, ':content_cb' => sub {
       # Local variables
       my ($data, $response, $protocol) = @_;
-      
       $downloadData       .= $data;                                     # Downloaded data
       my $totalDownloaded  = length($downloadData);                     # Size of downloaded data
       my $completed        = int($totalDownloaded / $TOTAL_SIZE * 100); # Pourcentage of download completed
-      
       $winPb->pbWinPb->SetPos($completed);    # Set the progress bar
       $winPb->lblCount->Text("$completed %"); # Indicate purcentage
     });
-    
     # Save data in a file
     if ($response and $response->is_success) {
       open(TLDDB,">$localTLDDB");
@@ -8420,7 +7802,6 @@ sub downloadTLDDB
       close(TLDDB);
     }
     $downloadData = undef;
-    
     # Finished
     if (-T $localTLDDB) {
       # Turn off progress bar
@@ -8458,7 +7839,6 @@ sub downloadTLDDB
       Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadTLDDB'}...", $STR{'error'}, 0x40010);
     } else { return($STR{'errDownloadTLDDB'}); }
   }
-  
   $TOTAL_SIZE = 0;
   
 }  #--- End downloadTLDDB
@@ -8469,7 +7849,6 @@ sub updateWSDB
 {
   # Local variables
 	my $confirm = shift;
-  
   my ($upToDate, $return, $dateLocalFile, $dateRemoteFile) = &checkDateWSDB($confirm);
   # Values for $upToDate
   # 0: Whois Server Database doesn't exist  
@@ -8477,7 +7856,6 @@ sub updateWSDB
   # 2: Database is outdated
   # 3: Error connection
   # 4: Unknown error
-
   # Whois Server Database is outdated or doesn't exist
   if (!$upToDate or $upToDate == 2) {
     my $msg;
@@ -8485,16 +7863,11 @@ sub updateWSDB
       Encode::from_to($dateRemoteFile, 'utf8', 'iso-8859-1');
       $msg = "$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} github.com (weppos): $dateRemoteFile\n\n$STR{'updateAvailable'} ?";
     } else { $msg = "$STR{'WSDBNotExist'} ?"; }
-    
-    # Yes (6), No (7)
     my $answer = Win32::GUI::MessageBox($win, $msg, $STR{'updateWSDB'}, 0x1024);
-    
-    # Answer is No
+    # Answer is No (7)
     if ($answer == 7) { return(0); }
-    
-    # Answer is Yes, download the update
+    # Answer is Yes (6), download the update
     else { &downloadWSDB(1, $winConfig->tfWSDB->Text()); }
-    
   # WSDB is up to date, show message if $confirm == 1
   } elsif ($upToDate == 1) {
     if ($confirm) {
@@ -8518,15 +7891,12 @@ sub checkDateWSDB
   my ($confirm)   = @_;
   my $localWSDB   = $winConfig->tfWSDB->Text();
   my $lastModifDate;
-  
   # if no database
   if (!$localWSDB or !-f $localWSDB) { return(0, undef, undef, undef); }
-  
   # Check date of local file
   my $dateWSDB        = (stat($localWSDB))[9];
   my ($dl, $ml, $yl)  = (&date($dateWSDB))[3,4,5];
   my $dateLocalFile   = "$yl-$ml-$dl";
-
   # Check date of the remote file
   my $ua = new LWP::UserAgent;
   $ua->agent($CONFIG{'USERAGENT'});
@@ -8539,7 +7909,6 @@ sub checkDateWSDB
     if ($res->content =~ /datetime="([^\"]+)"/) { $lastModifDate = $1; }
     $TOTAL_SIZE = $res->header('content_length');
   } else { return(3, $return, undef, undef); } # Error connection
-  
   # Compare local and remote file date
   if ($lastModifDate and my ($y, $m, $d) = parse_date($lastModifDate)) {   # Parse date
     my $dateUpt = sprintf("%4d-%02d-%02d", $y, $m, $d);
@@ -8564,13 +7933,11 @@ sub downloadWSDB
   my $confirm      = shift; # If $confirm == 1, show status in a popup, else return status
   my $localWSDB    = shift; # Local filepath
   if (!$localWSDB) { $localWSDB = "$USERDIR\\tld.json"; } # Default location
-  
   # Start an agent
   my $ua = new LWP::UserAgent;
   $ua->agent($CONFIG{'USERAGENT'});
   #$ua->timeout($CONFIG{'NSLOOKUP_TIMEOUT'});
   $ua->default_header('Accept-Language' => 'en');
-  
   # Set the progress bar
   $win->ChangeCursor($HOURGLASS);
   $winPb->lblPbCurr->Text($STR{'connecting'}.' github.com...');
@@ -8580,7 +7947,6 @@ sub downloadWSDB
   $winPb->pbWinPb->SetStep(1);
   $winPb->Center($win);
   $winPb->Show();
-  
   # Check size of the remote file
   if (!$TOTAL_SIZE) {
     my $req    = new HTTP::Request HEAD => $WSDB_URL;
@@ -8599,38 +7965,30 @@ sub downloadWSDB
       } else { return($STR{'errConnection'}); }
     }
   }
-  
   # Download the file
   if ($TOTAL_SIZE) {
     my $downloadData;
-    
     # Download the file
     $winPb->Text($STR{'downloadWSDB'}.'...');
     $winPb->lblPbCurr->Text($STR{'downloadWSDB'}.'...');
     my $response = $ua->get($WSDB_URL, ':content_cb' => sub {
       # Local variables
       my ($data, $response, $protocol) = @_;
-      
       $downloadData       .= $data;                                     # Downloaded data
       my $totalDownloaded  = length($downloadData);                     # Size of downloaded data
       my $completed        = int($totalDownloaded / $TOTAL_SIZE * 100); # Pourcentage of download completed
-      
       $winPb->pbWinPb->SetPos($completed);    # Set the progress bar
       $winPb->lblCount->Text("$completed %"); # Indicate purcentage
     });
-    
     # Save data in a file
     my @lines = split(/\n/, $downloadData);
     if ($response and $response->is_success) {
       open(WSDB,">$localWSDB");
-      foreach (@lines) {
-        # Remove comments from the JSON File (comments crash the parser)
-        if ($_ !~ /\s+\/\//) { print WSDB "$_\n"; }
-      }
+      # Remove comments from the JSON File (comments crash the parser)
+      foreach (@lines) { if ($_ !~ /\s+\/\//) { print WSDB "$_\n"; } }
       close(WSDB);
     }
     $downloadData = undef;
-    
     # Finished
     if (-T $localWSDB) {
       # Turn off progress bar
@@ -8657,7 +8015,6 @@ sub downloadWSDB
         Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadWSDB'}...", $STR{'error'}, 0x40010);
       } else { return($STR{'errDownloadWSDB'}); }
     }
-
   } else {
     # Turn off progress bar
     $win->ChangeCursor($ARROW);
@@ -8669,7 +8026,6 @@ sub downloadWSDB
       Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $STR{'errDownloadWSDB'}...", $STR{'error'}, 0x40010);
     } else { return($STR{'errDownloadWSDB'}); }
   }
-  
   $TOTAL_SIZE = 0;
   
 }  #--- End downloadWSDB
@@ -8680,7 +8036,6 @@ sub updateIPv4DB
 {
   # Local variables
 	my $confirm = shift;
-  
   my ($upToDate, $return, $dateLocalFile, $dateRemoteFile) = &checkDateIPv4DB($confirm);
   # Values for $upToDate
   # 0: Whois Server Database doesn't exist  
@@ -8688,7 +8043,6 @@ sub updateIPv4DB
   # 2: Database is outdated
   # 3: Error connection
   # 4: Unknown error
-
   # IPv4 Database is outdated or doesn't exist
   if (!$upToDate or $upToDate == 2) {
     my $msg;
@@ -8696,16 +8050,11 @@ sub updateIPv4DB
       Encode::from_to($dateRemoteFile, 'utf8', 'iso-8859-1');
       $msg = "$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} iana.org: $dateRemoteFile\n\n$STR{'updateAvailable'} ?";
     } else { $msg = "$STR{'IPv4DBNotExist'} ?"; }
-    
-    # Yes (6), No (7)
     my $answer = Win32::GUI::MessageBox($win, $msg, $STR{'updateIPv4DB'}, 0x1024);
-    
-    # Answer is No
+    # Answer is No (7)
     if ($answer == 7) { return(0); }
-    
-    # Answer is Yes, download the update
+    # Answer is Yes (6), download the update
     else { &downloadIPv4DB(1, $winConfig->tfIPv4DB->Text()); }
-    
   # IPv4DB is up to date, show message if $confirm == 1
   } elsif ($upToDate == 1) {
     if ($confirm) {
@@ -8729,15 +8078,12 @@ sub checkDateIPv4DB
   my ($confirm)   = @_;
   my $localIPv4DB = $winConfig->tfIPv4DB->Text();
   my $lastModifDate;
-  
   # IPv4 Database doesn't exist or invalid file
   if (!$localIPv4DB or !-f $localIPv4DB) { return(0, undef, undef, undef); }
-  
   # Check date of local file
   my $dateIPv4DB       = (stat($localIPv4DB))[9];
   my ($dl, $ml, $yl)  = (&date($dateIPv4DB))[3,4,5];
   my $dateLocalFile   = "$yl-$ml-$dl";
-
   # Check date of the remote file
   my $ua = new LWP::UserAgent;
   $ua->agent($CONFIG{'USERAGENT'});
@@ -8749,7 +8095,6 @@ sub checkDateIPv4DB
   if ($res->code == 200) {
     $lastModifDate = $res->header('last-modified');
   } else { return(3, $return, undef, undef); } # Error connection
-  
   # Compare local et remote file date
   if ($lastModifDate and my ($y, $m, $d) = parse_date($lastModifDate)) { # Parse date
     my $dateUpt = sprintf("%4d-%02d-%02d", $y, $m, $d);
@@ -8774,7 +8119,6 @@ sub downloadIPv4DB
   my $confirm        = shift; # If $confirm == 1, show status in a popup, else return status
   my $localIPv4DB    = shift; # Local filepath
   if (!$localIPv4DB) { $localIPv4DB = "$USERDIR\\ipv4-address-space.csv"; } # Default location
-  
   # IPv4DB is small, useless to show progress bar
   $win->ChangeCursor($HOURGLASS);
   if (is_success(getstore($IPv4DB_CSV, $localIPv4DB))) {
@@ -8801,7 +8145,6 @@ sub updateIPv6DB
 {
   # Local variables
 	my $confirm = shift;
-  
   my ($upToDate, $return, $dateLocalFile, $dateRemoteFile) = &checkDateIPv6DB($confirm);
   # Values for $upToDate
   # 0: Whois Server Database doesn't exist  
@@ -8809,7 +8152,6 @@ sub updateIPv6DB
   # 2: Database is outdated
   # 3: Error connection
   # 4: Unknown error
-
   # IPv6 Database is outdated or doesn't exist
   if (!$upToDate or $upToDate == 2) {
     my $msg;
@@ -8817,16 +8159,11 @@ sub updateIPv6DB
       Encode::from_to($dateRemoteFile, 'utf8', 'iso-8859-1');
       $msg = "$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} iana.org: $dateRemoteFile\n\n$STR{'updateAvailable'} ?";
     } else { $msg = "$STR{'IPv6DBNotExist'} ?"; }
-    
-    # Yes (6), No (7)
     my $answer = Win32::GUI::MessageBox($win, $msg, $STR{'updateIPv6DB'}, 0x1024);
-    
-    # Answer is No
+    # Answer is No (7)
     if ($answer == 7) { return(0); }
-    
-    # Answer is Yes, download the update
+    # Answer is Yes (6), download the update
     else { &downloadIPv6DB(1, $winConfig->tfIPv6DB->Text()); }
-    
   # IPv6DB is up to date, show message if $confirm == 1
   } elsif ($upToDate == 1) {
     if ($confirm) {
@@ -8850,15 +8187,12 @@ sub checkDateIPv6DB
   my ($confirm)   = @_;
   my $localIPv6DB  = $winConfig->tfIPv6DB->Text();
   my $lastModifDate;
-  
   # IPv6 Database doesn't exist or invalid file
   if (!$localIPv6DB or !-f $localIPv6DB) { return(0, undef, undef, undef); }
-  
   # Check date of local file
   my $dateIPv6DB       = (stat($localIPv6DB))[9];
   my ($dl, $ml, $yl)  = (&date($dateIPv6DB))[3,4,5];
   my $dateLocalFile   = "$yl-$ml-$dl";
-
   # Check date of the remote file
   my $ua = new LWP::UserAgent;
   $ua->agent($CONFIG{'USERAGENT'});
@@ -8870,7 +8204,6 @@ sub checkDateIPv6DB
   if ($res->code == 200) {
     $lastModifDate = $res->header('last-modified');
   } else { return(3, $return, undef, undef); } # Error connection
-  
   # Compare local et remote file date
   if ($lastModifDate and my ($y, $m, $d) = parse_date($lastModifDate)) { # Parse date
     my $dateUpt = sprintf("%4d-%02d-%02d", $y, $m, $d);
@@ -8895,7 +8228,6 @@ sub downloadIPv6DB
   my $confirm        = shift; # If $confirm == 1, show status in a popup, else return status
   my $localIPv6DB    = shift; # Local filepath
   if (!$localIPv6DB) { $localIPv6DB = "$USERDIR\\ipv6-unicast-address-assignments.csv"; } # Default location
-  
   # IPv6DB is small, useless to show progress bar
   $win->ChangeCursor($HOURGLASS);
   if (is_success(getstore($IPv6DB_CSV, $localIPv6DB))) {
@@ -8922,7 +8254,6 @@ sub saveConfig
 {
   # Local variables
   my $refConfig = shift;
-  
   # Save configuration hash values
   open(CONFIG,">$CONFIG_FILE");
   flock(CONFIG, 2);
@@ -8937,18 +8268,15 @@ sub loadConfig
 {
   # Local variables
   my $refConfig = shift;
-  
   # Open and load config values
   open(CONFIG, $CONFIG_FILE);
   my @tab = <CONFIG>;
   close(CONFIG);
-  
   foreach (@tab) {
     chomp($_);
     my ($key, $value) = split(/ = /, $_);
     if ($key) { $$refConfig{$key}  = $value; }
   }
-  
   # Options
   if (exists($$refConfig{'OPT_DOMAIN'}))          { $win->chDomain->Checked($$refConfig{'OPT_DOMAIN'});                       }
   else                                            { $win->chDomain->Checked(1);                                               } # Default checked
@@ -8956,7 +8284,6 @@ sub loadConfig
   else                                            { $win->chNetwork->Checked(1);                                              } # Default checked
   if (exists($$refConfig{'OPT_DNS'}))             { $win->chDNS->Checked($$refConfig{'OPT_DNS'});                             }
   else                                            { $win->chDNS->Checked(0);                                                  } # Default is not checked
-  
   # General tab
   if (exists($$refConfig{'TOOL_AUTO_UPDATE'}))    { $winConfig->chAutoUpdate->Checked($$refConfig{'TOOL_AUTO_UPDATE'});       }
   else                                            { $winConfig->chAutoUpdate->Checked(1);                                     } # Default checked
@@ -8975,7 +8302,6 @@ sub loadConfig
   else                                            { $winConfig->chHostname->Checked(1);                                       } # Default checked
   if (exists($$refConfig{'OPT_DOMAIN_NAME'}))     { $winConfig->chDomainName->Checked($$refConfig{'OPT_DOMAIN_NAME'});        }
   else                                            { $winConfig->chDomainName->Checked(1);                                     } # Default checked
-  
   # Folder for report
   if (exists($$refConfig{'DIR_REPORT'}) and
       -d $$refConfig{'DIR_REPORT'})               { $winConfig->tfReportDir->Text($$refConfig{'DIR_REPORT'});                 }
@@ -8987,7 +8313,6 @@ sub loadConfig
   else                                            { $winConfig->tfMaxView->Text(25); $$refConfig{'MAX_VIEW'} = 25;            } # Default is 25
   if (exists($$refConfig{'AUTO_VIEW_DIR'}))       { $winConfig->chAutoViewDir->Checked($$refConfig{'AUTO_VIEW_DIR'});         }
   else                                            { $winConfig->chAutoViewDir->Checked(0);                                    } # Default is not checked
-
   # Logging Database location
   if (exists($$refConfig{'CHECK_LOGGING_DB'}))    { $win->chCheckLogging->Checked($$refConfig{'CHECK_LOGGING_DB'});           }
   else                                            { $win->chCheckLogging->Checked(1);                                         } # Default is checked
@@ -8996,7 +8321,6 @@ sub loadConfig
   if (exists($$refConfig{'LOGGING'}))             { $winConfig->chLogActivate->Checked($$refConfig{'LOGGING'});               }
   else                                            { $winConfig->chLogActivate->Checked(1);                                    } # Default is checked
   if ($$refConfig{'LOGGING'}) { $win->tfComment->Enable(); } # If logging activated, comment can be added
-
   # Whois Database
   if (exists($$refConfig{'CHECK_WHOIS_DB'}))      { $win->cbCheckWhoisDB->SetCurSel($$refConfig{'CHECK_WHOIS_DB'});           }
   else                                            { $win->cbCheckWhoisDB->SetCurSel(1);                                       } # Default is "If present, ask"
@@ -9012,25 +8336,21 @@ sub loadConfig
   }
   if (exists($$refConfig{'WHOIS_CACHE'}))         { $winConfig->chDBCache->Checked($$refConfig{'WHOIS_CACHE'});               }
   else                                            { $winConfig->chDBCache->Checked(1);                                        } # Default is checked
-  
   # TLD Database location
   if (exists($$refConfig{'TLD_DB_FILE'}) and
       -f $$refConfig{'TLD_DB_FILE'})              { $winConfig->tfTLDDB->Text($$refConfig{'TLD_DB_FILE'});                    }
   if (exists($$refConfig{'TLD_DB_AUTO_UPDATE'}))  { $winConfig->chTLDDBAutoUpt->Checked($$refConfig{'TLD_DB_AUTO_UPDATE'});   }
   else                                            { $winConfig->chTLDDBAutoUpt->Checked(1);                                   } # Default is checked
-  
   # WS Database location
   if (exists($$refConfig{'WS_DB_FILE'}) and
       -f $$refConfig{'WS_DB_FILE'})               { $winConfig->tfWSDB->Text($$refConfig{'WS_DB_FILE'});                      }
   if (exists($$refConfig{'WS_DB_AUTO_UPDATE'}))   { $winConfig->chWSDBAutoUpt->Checked($$refConfig{'WS_DB_AUTO_UPDATE'});     }
   else                                            { $winConfig->chWSDBAutoUpt->Checked(1);                                    } # Default is checked
-  
   # IPv4 Database location
   if (exists($$refConfig{'IPv4_DB_FILE'}) and
       -f $$refConfig{'IPv4_DB_FILE'})             { $winConfig->tfIPv4DB->Text($$refConfig{'IPv4_DB_FILE'});                  }
   if (exists($$refConfig{'IPv4_DB_AUTO_UPDATE'})) { $winConfig->chIPv4DBAutoUpt->Checked($$refConfig{'IPv4_DB_AUTO_UPDATE'}); }
   else                                            { $winConfig->chIPv4DBAutoUpt->Checked(1);                                  } # Default is checked
-  
   # IPv6 Database location
   if (exists($$refConfig{'IPv6_DB_FILE'}) and
       -f $$refConfig{'IPv6_DB_FILE'})             { $winConfig->tfIPv6DB->Text($$refConfig{'IPv6_DB_FILE'});                  }

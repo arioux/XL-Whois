@@ -7,10 +7,10 @@
 # CodePlex			    : https://xlwhois.codeplex.com/
 # GitHub				    : https://github.com/arioux/XL-Whois
 # Creation          : 2015-09-30
-# Modified          : 2016-09-09
+# Modified          : 2017-03-09
 # Author            : Alain Rioux (admin@le-tools.com)
 #
-# Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
+# Copyright (C) 2015-2017  Alain Rioux (le-tools.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,11 +26,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #------------------------------------------------------------------------------#
-
-#------------------------------------------------------------------------------#
 # Modules
 #------------------------------------------------------------------------------#
-
 use strict;
 use warnings;
 use Win32::GUI::BitmapInline();
@@ -43,8 +40,7 @@ use Win32::GUI::BitmapInline();
 sub loadGraph
 #--------------------------#
 {
-
-my $winICO = Win32::GUI::BitmapInline->newIcon( q(
+  my $winICO = Win32::GUI::BitmapInline->newIcon( q(
 AAABAAkAAAAAAAEAIAA2AwEAlgAAAICAAAABACAAKAgBAMwDAQBgYAAAAQAgAKiUAAD0CwIASEgA
 AAEAIACIVAAAnKACAEBAAAABACAAKEIAACT1AgAwMAAAAQAgAKglAABMNwMAICAAAAEAIACoEAAA
 9FwDABgYAAABACAAiAkAAJxtAwAQEAAAAQAgAGgEAAAkdwMAiVBORw0KGgoAAAANSUhEUgAAAQAA
@@ -4051,7 +4047,6 @@ AAAAAAAAAAAAAAAAAAA8Ny4GbWtoO4mIhV9+bEteY04rOzsxIAYAAAAAAAAAAAAAAAAAAAAAAAAA
 APgfAADgBwAAwAMAAIABAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAEAAIABAADAAwAA
 4AcAAPgfAAA=
 ) );
-
   my $logoBmp = Win32::GUI::BitmapInline->new( q(
 Qk0WIwIAAAAAADYAAAAoAAAA9AEAAEYAAAABACAAAAAAAOAiAgASCwAAEgsAAAAAAAAAAAAA+fn5
 //n5+f/5+fn/+fn5//n5+f/5+fn/+fn5//n5+f/5+fn/+fn5//n5+f/5+fn/+fn5//n5+f/5+fn/
@@ -6512,7 +6507,6 @@ p1r/0qdZ/9KmV//SpVb/0qRT/9GkUf/Nn07/xKRr/8WwjP/Lp2b/tamV/9va2f/19fX/9fX1//X1
 +f/5+fn/+fn5//n5+f/5+fn/+fn5//n5+f/5+fn/+fn5//n5+f/5+fn/+fn5//n5+f/5+fn/+fn5
 //n5+f8=
 ) );
-
   my $logo128Bmp = Win32::GUI::BitmapInline->new( q(
 Qk02wAAAAAAAADYAAAAoAAAAgAAAAIAAAAABABgAAAAAAADAAADEDgAAxA4AAAAAAAAAAAAA////
 ////////////////////////////////////////////////////////////////////////////
@@ -7379,7 +7373,6 @@ u6N2sqyh1NTT9PTz/f38////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////
 ) );
-
   my $browseBmp = Win32::GUI::BitmapInline->new( q(
 Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA////
 ////////////////////////////////////////////////////////////+vv78fP28PL07/H0
@@ -7397,7 +7390,6 @@ emtWemtWemtWemtWemtWemtWeWpVgW9Z09HOx7ah2al/4Kd33ql636l736t74Kp84Kp94Kp94Kp8
 vr6+wMDA/f39////////////////////////////////////////////////////////////////
 ////////////////////////////////
 ) );
-  
   my $openDirBmp = Win32::GUI::BitmapInline->new( q(
 Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA////
 ////////////////////////////////////////////////////////////+vv78fP28PL07/H0
@@ -7415,7 +7407,6 @@ SLaVbaiCdJ51dpxyeJltOqB4hPHgQayHu6uI4MzD0Me+48mz8dnE/97MPaJ5W860vrma/+XV/+PS
 vr6+wMDA/f39////////////////////////////////////////////////////////////////
 ////////////////////////////////
 ) );
-  
   my $fileOpenBmp = Win32::GUI::BitmapInline->new( q(
 Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA////
 ////8vLy5OTk5OTk5OTkvb2+nZ6f4eHh4+Pj4+Pj4uLi4uLi8fHx////////////////2NjY+fn5
@@ -7433,7 +7424,6 @@ oKCisrKz////////////////2dnZ+fn58/Pz7e3t5+fo4uLi3Nzc0dHRwcHCpKWme3x/qKip////
 v4glw40qwo4usoQukG0oh3NJy8vL+Pj4////////////////////6efk0cq/0szA08zA083B083B
 z8rBy8jB29rY////////////////////
 ) );
-  
   my $fileNewBmp = Win32::GUI::BitmapInline->new( q(
 Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA////
 ////8vLy5OTk5OTk5OTk5OTk4+Pj4+Pj4+PjraSUwaRwvaNy2tra////////////////2NjY+fn5
@@ -7451,7 +7441,6 @@ oKCisrOz////////////////2dnZ+fn58/Pz7e3t5+fo4uLi3Nzc0dHRwcHCpKWme3x/qKip////
 v4glw40qwo4usoQukG0oh3NJy8vL+Pj4////////////////////6efk0cq/0szA08zA083B083B
 z8rBy8jB29rY////////////////////
 ) );
-  
   my $downloadBmp = Win32::GUI::BitmapInline->new( q(
 Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA////
 ////8vLy5OTk5OTk5OTk5OTk4+Pj4+Pj4+Pj4ODgsaiV19fV8fHx////////////////2NjY+fn5
@@ -7469,7 +7458,6 @@ oKCisrOz////////////////2dnZ+fn58/Pz7e3t5+fo4uLi3Nzc0dHRwcHCpKWme3x/qKip////
 v4glw40qwo4usoQukG0oh3NJy8vL+Pj4////////////////////6efk0cq/0szA08zA083B083B
 z8rBy8jB29rY////////////////////
 ) );
-    
   my $clipboardBmp = Win32::GUI::BitmapInline->new( q(
 Qk02DAAAAAAAADYAAAAoAAAAIAAAACAAAAABABgAAAAAAAAMAADEDgAAxA4AAAAAAAAAAAAA////
 ////////////////////////////////////////////////////////////////////////////
@@ -7527,7 +7515,6 @@ cnJecnJeaGhUaGdUaWdURVxtGDpeDkuSDkqSD0qSRHKq////////////////////////////////
 ////////////////////////////////////////////////////////////qqmdc3Jdc3Jdc3Jd
 c3Jdc3Jdc3Jdqqmd////////////////////////////////////////////////
 ) );
-  
   my $whoisBmp = Win32::GUI::BitmapInline->new( q(
 Qk02DAAAAAAAADYAAAAoAAAAIAAAACAAAAABABgAAAAAAAAMAADEDgAAxA4AAAAAAAAAAAAA////
 ////////////////////////////////////////////////vb2+hYWG5OTk////////////////
@@ -7585,7 +7572,6 @@ yZ9X1LiG07uRzaVf0a5w39nO069v0qlf0qhc06dZ0qVV0aZXzKdmx66C0tHQ////////////////
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
 ) );
-  
   my $databaseBmp = Win32::GUI::BitmapInline->new( q(
 Qk02DAAAAAAAADYAAAAoAAAAIAAAACAAAAABABgAAAAAAAAMAADEDgAAxA4AAAAAAAAAAAAA////
 ////////////////////////////////////////////////vb2+hYWG5OTl////////////////
@@ -7643,7 +7629,6 @@ zMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNyMjJ9fX1////
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
 ) );
-  
   my $config32Bmp = Win32::GUI::BitmapInline->new( q(
 Qk02DAAAAAAAADYAAAAoAAAAIAAAACAAAAABABgAAAAAAAAMAADEDgAAxA4AAAAAAAAAAAAA////
 ////////////////////////////////////////////////////////////////////////////
@@ -7701,7 +7686,6 @@ amxvamxvamxvamxvamxvamxvamxvamxvamxvamtveHl8xMXG////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
 ) );
-  
   my $config128Bmp = Win32::GUI::BitmapInline->new( q(
 Qk02wAAAAAAAADYAAAAoAAAAgAAAAIAAAAABABgAAAAAAADAAADEDgAAxA4AAAAAAAAAAAAA////
 ////////////////////////////////////////////////////////////////////////////
@@ -8568,7 +8552,6 @@ SktQSktQSktQSktQSktQSktQSktQSktQSktQSktQSUtQS01RTE1RcXJ1mZma09PU9vb2/f39////
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////
 ) );
-  
   my $helpBmp = Win32::GUI::BitmapInline->new( q(
 Qk02DAAAAAAAADYAAAAoAAAAIAAAACAAAAABABgAAAAAAAAMAADEDgAAxA4AAAAAAAAAAAAA////
 /v7++vr69vb28PDw6urq5OTk3t7e2tra1tbW0tLSz8/Pzc3Ny8vLycnJycnJycnJycnJy8vLzc3N
@@ -8626,7 +8609,6 @@ rZJ8rpJ8rpJ8rpN7r5J7sJJ6sJN7spR6tpiAuJuEt5qDtpqBtpiAtpd+tJZ8s5V7qoRl1L+t////
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
 ) );
-  
   my $aboutBmp = Win32::GUI::BitmapInline->new( q(
 Qk02DAAAAAAAADYAAAAoAAAAIAAAACAAAAABABgAAAAAAAAMAADEDgAAxA4AAAAAAAAAAAAA////
 ////////////////////////////////////////////////////////////////////////////
@@ -8684,7 +8666,6 @@ z6Vb0KVa0KVX0KRU0KJR0KFPvqd+8e/r////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
 ) );
-  
   my $exportBmp = Win32::GUI::BitmapInline->new( q(
 Qk02DAAAAAAAADYAAAAoAAAAIAAAACAAAAABABgAAAAAAAAMAADEDgAAxA4AAAAAAAAAAAAA////
 ////////////////////////////////////////////////////////////////////////////
@@ -8742,7 +8723,6 @@ zMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNyMjJ9fX1////
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
 ) );
-
   my $importBmp = Win32::GUI::BitmapInline->new( q(
 Qk02DAAAAAAAADYAAAAoAAAAIAAAACAAAAABABgAAAAAAAAMAADEDgAAxA4AAAAAAAAAAAAA////
 ////////////////////////9vb1oJ+b9vb1////////////////////////////////////////
@@ -8800,7 +8780,6 @@ zMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNyMjJ9fX1////
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
 ) );
-
   my $extractBmp = Win32::GUI::BitmapInline->new( q(
 Qk02DAAAAAAAADYAAAAoAAAAIAAAACAAAAABABgAAAAAAAAMAADEDgAAxA4AAAAAAAAAAAAA////
 ////////////////////////9vb1oJ+b9vb1////////////////////////////////////////
@@ -8858,7 +8837,6 @@ vKiGvamGvKmHvKmIvKqJuaiJtKWIrqCHqJyHoZeFopyO3NvZ////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
 ) );
-
   my $validdbBmp = Win32::GUI::BitmapInline->new( q(
 Qk02DAAAAAAAADYAAAAoAAAAIAAAACAAAAABABgAAAAAAAAMAADEDgAAxA4AAAAAAAAAAAAA////
 ////////////////////////////////////////////////////////////////////////7Ovr
@@ -8916,7 +8894,6 @@ zMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNzMzNyMjJ9fX1////
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
 ) );
-  
   my $searchDB = Win32::GUI::BitmapInline->new( q(
 Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA+/v7
 6enp5eXl5ubm5+fn6enp6+vr7e3t7+/v8fHx9PT09vb2+fn5+/v7/Pz8/v7+9/f3wcHBhYWFlpaW
@@ -8934,7 +8911,6 @@ uLi4////////////////////z8/P0crC7t3M9One+PDp+PDp+PDp+PDp9erf0svEz8/P////////
 ////6Ojow8LB1M3F7uLX9u/m8uvk1tHLw8LB6Ojo////////////////////////////////9PT0
 1NTUw8PDvLy8w8PD1NTU9PT0////////
 ) );
-  
   my $searchDB_p = Win32::GUI::BitmapInline->new( q(
 Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA+/v7
 6enp5eXl5ubm5+fn6enp6+vr7e3t7+/v8fHx9PT09vb2+fn5+/v7/Pz8/v7+9/f3wcHBhYWFlpaW
@@ -8952,7 +8928,6 @@ uLi4////////////////////z8/P0crC7t3M9One+PDp+PDp+PDp+PDp9erf0svEz8/P////////
 ////6Ojow8LB1M3F7uLX9u/m8uvk1tHLw8LB6Ojo////////////////////////////////9PT0
 1NTUw8PDvLy8w8PD1NTU9PT0////////
 ) );
-  
   my $searchDB_n = Win32::GUI::BitmapInline->new( q(
 Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA+/v7
 6enp5eXl5ubm5+fn6enp6+vr7e3t7+/v8fHx9PT0aKZkNYUxaadl/Pz8/v7+9/f3wcHBhYWFlpaW
@@ -8970,7 +8945,6 @@ uLi4////////////////////z8/P0crC7t3M9One+PDp+PDp+PDp+PDp9erf0svEz8/P////////
 ////6Ojow8LB1M3F7uLX9u/m8uvk1tHLw8LB6Ojo////////////////////////////////9PT0
 1NTUw8PDvLy8w8PD1NTU9PT0////////
 ) );
-  
   my $filterDB = Win32::GUI::BitmapInline->new( q(
 Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA////
 ////+vr64eHhzc3NzMzMfX19fHx8sbGxzMzMzMzM3d3d9/f3/////////////////////Pz88PDw
@@ -8988,7 +8962,6 @@ x8bGr6SkxLKyhoaG2dnZ////////////////////////////////3NzcmZmZy8vLwcDArqGhvqys
 lZWVhISEd3d3fHx8hoaGk5OToaGhra2tyMjI////////////////////////////////////////
 ////////////////////////////////
 ) );
-
   my $filterDB_p = Win32::GUI::BitmapInline->new( q(
 Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA////
 +vr64eHhzc3NzMzMfX19fHx8sbGxzMzMzMzM3d3d9/f3/////////////////////Pz88PDw5ubm
@@ -9006,7 +8979,6 @@ k5OT3t7e////////////////////////4eHhnJyc0dHRw8PDu7q6rJ6euKamzry8383NoaGh4uLi
 hISEd3d3fHx8hoaGk5OToaGhra2tyMjI////////////////////////////////////////////
 ////////////////////////////////
 ) );
-  
   my $filterDB_n = Win32::GUI::BitmapInline->new( q(
 Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA////
 +vr64eHhzc3NzMzMfX19fHx8sbGxzMzMzMzM3d3dZJNhN4czaqdm/////////////Pz88PDw5ubm
@@ -9024,7 +8996,6 @@ k5OT3t7e////////////////////////4eHhnJyc0dHRw8PDu7q6rJ6euKamzry8383NoaGh4uLi
 hISEd3d3fHx8hoaGk5OToaGhra2tyMjI////////////////////////////////////////////
 ////////////////////////////////
 ) );
-  
   my $database16 = Win32::GUI::BitmapInline->new( q(
 Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA////
 ////////////////////wcHCnZ6f+Pj4////////////////////////////////////6+vr1tbW
@@ -9042,7 +9013,6 @@ u7y9srK0+Pj4////////6+vr+fn59vb28fHx8PDw7+/w7Ozs6enp5eXm2NjZzMzNx8fIwcHC+Pj4
 zs7Py8vLysrKysrKy8vLzs7Oz8/P0NDQ4eHh////////////////////////////////////////
 ////////////////////////////////
 ) );
-  
   my $checkBmp = Win32::GUI::BitmapInline->new( q(
 Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA////
 ////////////z/LgaN2gJt19B+RxB+RxJtx9aN2gz/Lg////////////////////////9vz5ZdSa
@@ -9060,7 +9030,6 @@ ddGgl924itivlty4oN++peHCpuHCouDAmd26j9mzmd26dtGh+Pz6////////////+P36md25u+jQ
 wOrUrOTHrOPHreTHr+TIwuvVuufPmd25+P36////////////////////////3vTor+THquLErePH
 rePHquLEsOTI3/Tp////////////////
 ) );
-  
   my $errorBmp = Win32::GUI::BitmapInline->new( q(
 Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA////
 ////////////z8/yaGjdJibdBwfkBwfkJibcaGjdz8/y////////////////////////9vb8ZWXU
@@ -9078,7 +9047,6 @@ dXXRl5fdiorYlpbcoKDfpaXhpqbhoqLgmZndj4/ZmZnddnbR+Pj8////////////+Pj9mZndu7vo
 wMDqrKzkrKzjra3kr6/kwsLrurrnmZnd+Pj9////////////////////////3t70r6/kqqrira3j
 ra3jqqrisLDk39/0////////////////
 ) );
-  
   return($winICO, $logoBmp, $logo128Bmp, $browseBmp, $openDirBmp, $fileOpenBmp,
          $fileNewBmp, $downloadBmp, $clipboardBmp, $whoisBmp, $databaseBmp,
          $config32Bmp, $config128Bmp, $helpBmp, $aboutBmp, $exportBmp,

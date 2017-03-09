@@ -7,10 +7,10 @@
 # CodePlex			  : https://xlwhois.codeplex.com/
 # GitHub				  : https://github.com/arioux/XL-Whois
 # Creation        : 2015-09-30
-# Modified        : 2016-09-09
+# Modified        : 2017-03-09
 # Author          : Alain Rioux (admin@le-tools.com)
 #
-# Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
+# Copyright (C) 2015-2017  Alain Rioux (le-tools.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,11 +26,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #------------------------------------------------------------------------------#
-
-#------------------------------------------------------------------------------#
 # Modules
 #------------------------------------------------------------------------------#
-
 use strict;
 use warnings;
 
@@ -40,12 +37,10 @@ sub loadStr
 {
   # Local variables
   my ($refSTR, $LANG_FILE) = @_;
-  
   # Open and load string values
   open(LANG, "<:encoding(UTF-8)", $LANG_FILE);
   my @tab = <LANG>;
   close(LANG);
-  
   # Store values  
   foreach (@tab) {
     chomp($_);
@@ -61,11 +56,8 @@ sub loadStr
 sub loadDefaultStr
 #------------------------------------------------------------------------------#
 {
-  # Local variables
-  my $refSTR = shift;
-  
   # Set default strings
-  
+  my $refSTR = shift;
   # General strings
   $$refSTR{'cancel'}            = 'Cancel';
   $$refSTR{'error'}             = 'Error';
@@ -142,7 +134,6 @@ sub loadDefaultStr
   $$refSTR{'downloadIPv6DB'}    = 'Download IPv6 Database';
   $$refSTR{'errDownloadIPv6DB'} = 'Error downloading IPv6 Database';
   $$refSTR{'defaultConfigSet'}  = 'Default configuration has been set. Do you want to send a test ?';
-  
   # Main Window
   $$refSTR{'btnItemClip'}       = 'View/Edit clipboard content';
   $$refSTR{'lblInput'}          = 'Clipboard content is always used as input data';
@@ -164,7 +155,6 @@ sub loadDefaultStr
   $$refSTR{'btnWinDatabaseTip'} = 'Open Whois Database...';
   $$refSTR{'btnHelpTip'}        = 'See Help...';
   $$refSTR{'btnAboutTip'}       = 'About this tools...';
-  
   # Taskbar menu
   $$refSTR{'menu1'}           = 'Show XL-Whois';
   $$refSTR{'menu2'}           = 'Whois';
@@ -172,7 +162,6 @@ sub loadDefaultStr
   $$refSTR{'menu4'}           = 'Show Logging Database...';
   $$refSTR{'menu5'}           = 'Help...';
   $$refSTR{'menu6'}           = 'Quit';
-  
   # Clipboard Window
   $$refSTR{'winClip'}         = 'Clipboard';
   $$refSTR{'btnClipOk'}       = 'OK';
@@ -180,7 +169,6 @@ sub loadDefaultStr
   $$refSTR{'btnClipParse'}    = 'Parse';
   $$refSTR{'errNoTextData'}   = 'There is no text data in clipboard.';
   $$refSTR{'errNoValidData'}  = 'There is no valid data in the Clipboard.';
-  
   # Config Window
   $$refSTR{'config'}              = 'Config';
   $$refSTR{'general'}             = 'General';
@@ -255,7 +243,6 @@ sub loadDefaultStr
   $$refSTR{'WSDBNotExist'}        = 'The Whois Server database (tld.json) does not exist, download';
   $$refSTR{'IPv4DBNotExist'}      = 'The IPv4 database (ipv4-address-space.csv) does not exist, download';
   $$refSTR{'IPv6DBNotExist'}      = 'The IPv6 database (ipv6-unicast-address-assignments.csv) does not exist, download';
-  
   # Whois Database Window
   $$refSTR{'winDB'}               = 'Whois Database';
   $$refSTR{'btnExportDBTip'}      = 'Export Database';
@@ -300,7 +287,6 @@ sub loadDefaultStr
   $$refSTR{'errReadingNetworkData'} = 'Error reading Network Whois Data file: ';
   $$refSTR{'deletingISP'}         = 'Deleting ISP entries...';
   $$refSTR{'sortProgress'}        = 'Sorting in progress';
-  
   # Add ISP Ranges Window
   $$refSTR{'winAddRanges'}        = 'Add ISP Ranges';
   $$refSTR{'winAddRSelected'}     = 'Add selected ranges';
@@ -310,10 +296,8 @@ sub loadDefaultStr
   $$refSTR{'remOverlap'}          = 'Remove overlapping ranges from the list';
   $$refSTR{'noASNorIDFound'}      = 'No ASN or ID found.';
   $$refSTR{'noRangeISP'}          = 'No other ranges found for the ISP.';
-  
   # Network Whois Data Window
   $$refSTR{'winNWD'} = 'Network Whois Data';
-  
   # Filter window
   $$refSTR{'winFilter'}       = 'Filters';
   $$refSTR{'lblAddFilterOp'}  = 'Add Filter Operator:';
@@ -325,7 +309,6 @@ sub loadDefaultStr
   $$refSTR{'lblOperator'}     = 'Operator:';
   $$refSTR{'lblFilterValue'}  = 'Value:' ;
   $$refSTR{'btnApplyFilter'}  = 'Apply Filters';
-  
   # Analysis Whois Database Window (AWD)
   $$refSTR{'winAWD'}          = 'Analyse Whois Database';
   $$refSTR{'lblChoice'}       = 'Matches found';
@@ -333,7 +316,6 @@ sub loadDefaultStr
   $$refSTR{'lblISPin'}        = 'Includes the following ISPs:';
   $$refSTR{'lblISPMsg'}       = 'Uncheck entry that you want to delete by double-clicking on it and push Next to continue.';
   $$refSTR{'btnAWDNext'}      = 'Next';
-  
   # Logging Database Window
   $$refSTR{'winLogDB'}          = 'Logging Database';
   $$refSTR{'date'}              = 'Date';
@@ -344,10 +326,8 @@ sub loadDefaultStr
   $$refSTR{'selectLogFile'}     = 'Select the log file:';
   $$refSTR{'importingLoggingData'} = 'Importing Logging data...';
   $$refSTR{'exportingLoggingDB'}   = 'Exporting Logging Database...';
-  
   # Simple Progress window
   $$refSTR{'winPb'}           = 'Progress';
-  
   # About Window
   $$refSTR{'about'}           = 'About';
   $$refSTR{'version'}         = 'Version';
@@ -357,7 +337,6 @@ sub loadDefaultStr
   $$refSTR{'translatorName'}  = '-';
   
 }  #--- End loadStrings
-
 
 #------------------------------------------------------------------------------#
 1;

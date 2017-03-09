@@ -28,7 +28,7 @@ following modules installed:
 - DBI (v1.631)
 - Regexp-IPv6 (v0.03)
 - Domain::PublicSuffix (v0.10)
-- Net-Whois-IP (v1.18)
+- Net-Whois-IP (v1.18) - Modified
 - Net-Whois-Raw (v2.91)
 - Net-DNS (v1.02)
 - Net-CIDR (v0.17)
@@ -50,13 +50,11 @@ To do
 Packaging
 ---------
 
-Executable has been packaged using PerlApp v.9.2.1 (ActiveState). For 
-alternative to PerlApp, see 
+Executable has been packaged using PerlApp v.9.2.1 (ActiveState). For alternative to PerlApp, see 
 http://www.nicholassolutions.com/tutorials/perl-PAR.htm.
 
-Some additional modules may be required or manually added before 
-packaging. Before packaging this tool, you will have to modify 
-Net::DNS::Resolver:
+Some additional modules may be required or manually added before packaging. Before packaging 
+this tool, you will have to modify Net::DNS::Resolver:
 
 Copy the code (# Modification) at the right place:
 
@@ -76,5 +74,40 @@ for ( $^O, 'UNIX' ) {
 	last if @ISA;
 }
 
+You also have to modify Net-Whois-IP. Modify the code (# Modification) at the right place:
+
+##Change 3-1-07
+#	    my $origIp = $ip;$ip = '! '.$1;
+#	    if ($ip !~ /\d{1,3}\-\d{1,3}\-\d{1,3}\-\d{1,3}/){
+#	      $ip = $origIp;
+#	    }
+	    my $origIp = $ip;$ip = '! '.$1;
+		# Modif: Keep the smallest block
+	    if ($origIp =~ /! NET-(\d{1,3}\-\d{1,3}\-\d{1,3}\-\d{1,3})/) {
+	      my $orIP = $1;
+	      if ($ip =~ /! NET-(\d{1,3}\-\d{1,3}\-\d{1,3}\-\d{1,3})/) {
+	        my $nwIP = $1;
+					
+					# Start Modification: Added this code below
+					my $orIPInt = pack('C4', split(/\-/,$orIP));
+					my $nwIPInt = pack('C4', split(/\-/,$nwIP));
+	        if ($orIPInt gt $nwIPInt) { # Start IP address is "higher"
+			$ip = $origIp;
+	        } elsif ($orIPInt eq $nwIPInt) {
+						my $orIPE;
+						my $nwIPE;
+						if ($origIp =~ /\d{1,3}\-\d{1,3}\-\d{1,3}\-\d{1,3} - (\d{1,3}\-\d{1,3}\-\d{1,3}\-\d{1,3})/) { $orIPE = $1; }
+						if ($ip =~ /\d{1,3}\-\d{1,3}\-\d{1,3}\-\d{1,3} - (\d{1,3}\-\d{1,3}\-\d{1,3}\-\d{1,3})/) { $nwIPE = $2; }
+						if (pack('C4', split(/\-/,$orIPE)) gt pack('C4', split(/\-/,$nwIPE))) { # End IP address is "higher"
+								$ip = $origIp;
+						}
+					}
+					# End modification
+					
+	      }
+	    }
+	    if ($ip !~ /\d{1,3}\-\d{1,3}\-\d{1,3}\-\d{1,3}/){
+	      $ip = $origIp;
+	    }
 
 
