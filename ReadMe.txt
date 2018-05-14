@@ -5,15 +5,15 @@ Description 	: Part of the XL-Toolkit, XL-Whois is a tool to gather whois
 								of the XL-Toolkit.
 Author 				: Alain Rioux (admin@le-tools.com)
 WebSite				: http://le-tools.com/XL-Whois.html
+SourceForge   : https://sourceforge.net/p/xl-whois
 GitHub				: https://github.com/arioux/XL-Whois
 Documentation	: http://le-tools.com/XL-WhoisDoc.html
-CodePlex			: https://xlwhois.codeplex.com/
 
 
 Licence
 -------
 
-Copyright (C) 2015-2017  Alain Rioux (le-tools.com)
+Copyright (C) 2015-2018  Alain Rioux (le-tools.com)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

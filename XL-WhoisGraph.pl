@@ -2,10 +2,10 @@
 # Perl - v: 5.16.3
 #------------------------------------------------------------------------------#
 # XL-WhoisGraph.pl  : Graphic elements for XL-Whois
-# WebSite				    : http://le-tools.com/XL-Whois.html
-# Documentation	    : http://le-tools.com/XL-WhoisDoc.html
-# CodePlex			    : https://xlwhois.codeplex.com/
-# GitHub				    : https://github.com/arioux/XL-Whois
+# WebSite           : http://le-tools.com/XL-Whois.html
+# Documentation     : http://le-tools.com/XL-WhoisDoc.html
+# SourceForge       : https://sourceforge.net/p/xl-whois
+# GitHub            : https://github.com/arioux/XL-Whois
 # Creation          : 2015-09-30
 # Modified          : 2017-03-09
 # Author            : Alain Rioux (admin@le-tools.com)
