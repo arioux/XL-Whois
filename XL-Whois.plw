@@ -11,8 +11,8 @@
 # SourceForge   : https://sourceforge.net/p/xl-whois
 # GitHub        : https://github.com/arioux/XL-Whois
 # Creation      : 2015-09-30
-# Modified      : 2018-05-14
-my $VERSION     = "4.2";
+# Modified      : 2018-05-25
+my $VERSION     = "4.2.1";
 # Author        : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2018  Alain Rioux (le-tools.com)
@@ -5993,9 +5993,7 @@ sub domainWhois
 {
   # Local variables
   my ($item, $i, $domain, $refResponse, $refTLD, $refWSL) = @_;
-  my $whois_server;
-  my $whois;
-  my $server;
+  my ($whois_server, $whois, $server);
   # Determine the good server
   my $domainExt;
   if ($domainExt = $$refTLD->get_root_domain($domain)) {
@@ -6007,9 +6005,12 @@ sub domainWhois
     if ($whois_server) { eval { ($whois, $server) = whois($domain, $whois_server); }; }
     # No known whois server, ask Internic
     else {
-      eval { ($whois, $server) = whois("dom $domain", 'whois.internic.net'); };
+      eval { ($whois, $server) = whois($domain, 'whois.internic.net'); };
+      sleep(1);
       if ($whois and $whois =~ /Registrar WHOIS Server:\s*([^\s]+)/) {
         eval { ($whois, $server) = whois($domain, $1); };
+      } elsif ($whois =~ /Invalid query/ and $server) {
+        eval { ($whois, $server) = whois($domain, $server); };
       } else { eval { ($whois, $server) = whois($domain); }; }
     }
   }
