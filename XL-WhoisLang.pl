@@ -7,10 +7,10 @@
 # SourceForge     : https://sourceforge.net/p/xl-whois
 # GitHub          : https://github.com/arioux/XL-Whois
 # Creation        : 2015-09-30
-# Modified        : 2018-05-14
+# Modified        : 2019-02-17
 # Author          : Alain Rioux (admin@le-tools.com)
 #
-# Copyright (C) 2015-2018  Alain Rioux (le-tools.com)
+# Copyright (C) 2015-2019  Alain Rioux (le-tools.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -63,11 +63,13 @@ sub loadDefaultStr
   $$refSTR{'Error'}             = 'Error';
   $$refSTR{'Add'}               = 'Add';
   $$refSTR{'Edit'}              = 'Edit';
+  $$refSTR{'Save'}              = 'Save';
   $$refSTR{'Download'}          = 'Download';
   $$refSTR{'Select'}            = 'Select';
   $$refSTR{'Update'}            = 'Update';
   $$refSTR{'Show'}              = 'Show';
   $$refSTR{'Search'}            = 'Search';
+  $$refSTR{'Get'}               = 'Get';
   $$refSTR{'OK'}                = 'OK';
   $$refSTR{'Exporting'}         = 'Exporting';
   $$refSTR{'Analysing'}         = 'Analysing';
@@ -78,6 +80,7 @@ sub loadDefaultStr
   $$refSTR{'database'}          = 'database';
   $$refSTR{'file'}              = 'file';
   $$refSTR{'report'}            = 'report';
+  $$refSTR{'language'}          = 'language';
   $$refSTR{'ISP'}               = 'ISP';
   $$refSTR{'item'}              = 'Item';
   $$refSTR{'Whois'}             = 'Whois';
@@ -88,7 +91,7 @@ sub loadDefaultStr
   $$refSTR{'errReading'}        = 'Error reading file: ';
   $$refSTR{'errWriting'}        = 'Error writing';
   $$refSTR{'errDownloading'}    = 'Error downloading';
-  $$refSTR{'errNoDB'}           = 'No database file.';
+  $$refSTR{'errNoDB'}           = 'No database file. You can select or create one in Settings.';
   $$refSTR{'errorMsg'}          = 'Error messsage';
   $$refSTR{'errConnection'}     = 'Error Connection';
   $$refSTR{'errUnknown'}        = 'Unknown error';
@@ -100,6 +103,7 @@ sub loadDefaultStr
   $$refSTR{'newLineGrid'}       = ' new line in grid.';
   $$refSTR{'errProcessRun'}     = 'A process is already running. Wait until it stops or restart the program.';
   $$refSTR{'errResolver'}       = 'Unable to resolve domain name or IP address.';
+  $$refSTR{'errGeoIPResolve'}   = 'Unable to open GeoIP2 resolver.';
   $$refSTR{'errViewingReport'}  = 'Error viewing report: ';
   $$refSTR{'errTableWhoisDB'}   = 'Whois Database is not valid: No Whois table found.';
   $$refSTR{'errTableLoggingDB'} = 'Logging Database is not valid: No Logging table found.';
@@ -117,7 +121,7 @@ sub loadDefaultStr
   $$refSTR{'wasFoundLoggingDB'} = 'was found in the Logging Database';
   $$refSTR{'more3entries'}      = 'There are more than 3 entries found for';
   $$refSTR{'inLoggingDBLast3'}  = 'in Logging Database. Last 3 entries';
-  $$refSTR{'sendQueryAnyway'}   = 'Send the query anyway ?';
+  $$refSTR{'sendQueryAnyway'}   = 'Send the query anyway?';
   $$refSTR{'checkDB'}           = 'Check Databases';
   $$refSTR{'inDatabase'}        = 'In Database';
   $$refSTR{'Current'}           = 'Current';
@@ -143,11 +147,12 @@ sub loadDefaultStr
   $$refSTR{'cbCheckWhoisDB4'}   = 'Check after';
   $$refSTR{'chCheckLogging'}    = 'Check Logging Database';
   $$refSTR{'lblAddComment'}     = 'Add comment';
-  $$refSTR{'lblNotReady'}       = 'Not Ready ? Click here';
+  $$refSTR{'lblNotReady'}       = 'Not Ready? Click here';
   $$refSTR{'notReady'}          = 'Not ready';
   $$refSTR{'nextStep'}          = 'Next step';
   $$refSTR{'btnWhoisTip'}       = 'Send whois request';
   $$refSTR{'btnWinDatabaseTip'} = 'Open Whois Database...';
+  $$refSTR{'extractFromClip'}   = 'Extract Network Whois data from clipboard';
   $$refSTR{'btnHelpTip'}        = 'See Help...';
   $$refSTR{'btnAboutTip'}       = 'About this tools...';
   # Clipboard Window
@@ -157,21 +162,20 @@ sub loadDefaultStr
   $$refSTR{'errNoValidData'}    = 'There is no valid data in the Clipboard.';
   # Config Window
   $$refSTR{'config'}            = 'Settings';
-  $$refSTR{'general'}           = 'General';
+  $$refSTR{'General'}           = 'General';
   $$refSTR{'storage'}           = 'Storage';
   $$refSTR{'Databases'}         = 'Databases';
   $$refSTR{'OpenUserDir'}       = 'Open user dir';
   $$refSTR{'update1'}           = 'You have the latest version installed.';
   $$refSTR{'update2'}           = 'Check for update';
-  $$refSTR{'update4'}           = 'Version';
   $$refSTR{'update5'}           = 'is available. Download it';
   $$refSTR{'SetGenOpt'}         = 'Set General options';
   $$refSTR{'winCW'}             = 'Configuration Wizard';
-  $$refSTR{'configSet'}         = 'XL-Whois has been configured !';
+  $$refSTR{'configSet'}         = 'XL-Whois has been configured!';
   $$refSTR{'configSetPart'}     = 'Aborted! XL-Whois has been partially configured.';
-  $$refSTR{'firstUse'}          = 'This is your first use of XL-Whois. Do you want to set default configuration ?';
+  $$refSTR{'firstUse'}          = 'This is your first use of XL-Whois. Do you want to set default configuration?';
   $$refSTR{'defaultDir'}        = 'Do you want to use default dir';
-  $$refSTR{'defaultConfigSet'}  = 'Default configuration has been set. Do you want to send a test ?';
+  $$refSTR{'defaultConfigSet'}  = 'Default configuration has been set. Do you want to send a test?';
   # General tab
   $$refSTR{'tool'}              = 'Tool';
   $$refSTR{'Export'}            = 'Export';
@@ -179,6 +183,9 @@ sub loadDefaultStr
   $$refSTR{'chAutoUpdate'}      = 'Check for update at startup';
   $$refSTR{'lblParser'}         = 'Parser';
   $$refSTR{'chStartMinimized'}  = 'Start in taskbar (minimized)';
+  $$refSTR{'NWMode'}            = 'Network whois mode';
+  $$refSTR{'NWModeNormal'}      = 'Normal';
+  $$refSTR{'NWModeRDAP'}        = 'RDAP';
   $$refSTR{'lblNsLookupTO1'}    = 'Nslookup timeout';
   $$refSTR{'lblNsLookupTO2'}    = 'seconds';
   $$refSTR{'UserAgent'}         = 'User-Agent';
@@ -195,10 +202,11 @@ sub loadDefaultStr
   $$refSTR{'btnLogDbFileNewTip'}  = 'Create a new Logging Database';
   $$refSTR{'btnLogDbViewTip'}     = 'View Logging Database';
   $$refSTR{'btnLogDbFileNew'}     = 'Select the Logging Database location:';
-  $$refSTR{'chDBCache'}           = 'Store Network whois data';
   $$refSTR{'btnDbFileNewTip'}     = 'Create a new Whois Database';
   $$refSTR{'btnDbFileNew'}        = 'Select the Whois Database location:';
   $$refSTR{'btnWhoisDbViewTip'}   = 'View Whois Database';
+  $$refSTR{'chDBCache'}           = 'Store Network whois data (in .\cache)';
+  $$refSTR{'chGetRelRangeCache'}  = 'Store "Get related ranges" searches (in .\searches)';
   # Databases tab
   $$refSTR{'lblTLDDB'}            = 'TLD Database';
   $$refSTR{'lblWSDB'}             = 'Whois Server Database';  
@@ -212,6 +220,8 @@ sub loadDefaultStr
   $$refSTR{'remoteDBDate'}        = 'DB date on';
   $$refSTR{'updateAvailable'}     = 'An update of the database is available, download';
   $$refSTR{'DBUpToDate'}          = 'Your database is up to date';
+  $$refSTR{'GeoIP'}               = 'GeoIP';
+  $$refSTR{'GeoIPDB'}             = 'GeoIP Database'; 
   # Whois Database Window
   $$refSTR{'winDB'}               = 'Whois Database';
   $$refSTR{'btnImportDBTip'}      = 'Import to Database';
@@ -222,6 +232,9 @@ sub loadDefaultStr
   $$refSTR{'btnFilterDBTip'}      = 'Use Filter';
   $$refSTR{'btnFilterDB_delTip'}  = 'Delete filters';
   $$refSTR{'btnFilterDB_addTip'}  = 'Add filter';
+  $$refSTR{'Selected'}            = 'Selected';
+  $$refSTR{'NotSelected'}         = 'Not selected';
+  $$refSTR{'showProperties'}      = 'Properties...';
   $$refSTR{'getAllRanges'}        = 'Get all related ranges';
   $$refSTR{'gridSelectAll'}       = 'Select All';
   $$refSTR{'lineCopy'}            = 'Copy lines';
@@ -251,29 +264,55 @@ sub loadDefaultStr
   $$refSTR{'sortProgress'}        = 'Sorting in progress';
   # Add ISP Ranges Window
   $$refSTR{'winAddRanges'}        = 'Add ISP Ranges';
+  $$refSTR{'Organisation'}        = 'Organisation';
+  $$refSTR{'Source'}              = 'Source';
+  $$refSTR{'OrgID'}               = 'Org ID';
+  $$refSTR{'ASN'}                 = 'ASN';
+  $$refSTR{'AdminC'}              = 'Admin-c';
+  $$refSTR{'Route'}               = 'Route';
+  $$refSTR{'Org'}                 = 'Org';
+  $$refSTR{'Formatted'}           = 'Formatted';
+  $$refSTR{'Treeview'}            = 'Treeview';
+  $$refSTR{'Raw'}                 = 'Raw';
+  $$refSTR{'identifyReg'}         = 'Identify appropriate registry';
+  $$refSTR{'SearchFor'}           = 'Search for';
+  $$refSTR{'ParsingResp'}         = 'Data received. Parsing data';
+  $$refSTR{'customerRange'}       = 'This is a customer range, get the parent related ranges';
+  $$refSTR{'RelatedRanges'}       = 'Related ranges';
+  $$refSTR{'AllRanges'}           = 'All ranges';
+  $$refSTR{'ParentOnly'}          = 'Parent only';
+  $$refSTR{'SmallerOnly'}         = 'Smaller only';
+  $$refSTR{'RemNetNames'}         = 'Remove Netnames';
+  $$refSTR{'First'}               = 'First';
+  $$refSTR{'Second'}              = 'Second';
+  $$refSTR{'Last'}                = 'Last';
+  $$refSTR{'ChoiceOfEachRow'}     = 'choice of each row';
+  $$refSTR{'Previous'}            = 'Previous';
   $$refSTR{'winAddRSelected'}     = 'Add selected ranges';
-  $$refSTR{'queryASNorID'}        = 'Query the registry for the ASN or ID';
-  $$refSTR{'queryallRange1'}      = 'Query ';
-  $$refSTR{'queryallRange2'}      = ' for all ranges related to ';
-  $$refSTR{'remOverlap'}          = 'Remove overlapping ranges from the list';
+  $$refSTR{'applyFilters'}        = 'Browse grid and apply filter';
   $$refSTR{'noASNorIDFound'}      = 'No ASN or ID found.';
   $$refSTR{'noRangeISP'}          = 'No other ranges found for the ISP.';
-  # ISP window
+  # Network Whois Properties Window
+  $$refSTR{'winNWP'}          = 'Network Whois properties';
   $$refSTR{'From'}            = 'From';
   $$refSTR{'To'}              = 'To';
-  $$refSTR{'ISPExists'}       = 'This range already exists in database. Modify it ?';
-  $$refSTR{'ISPNotExists'}    = "This range doesn\'t exists in database. Add it ?";
+  $$refSTR{'CIDR'}            = 'CIDR';
+  $$refSTR{'GetUpdate'}       = 'Get/Update';
+  $$refSTR{'NWProperties'}    = 'Properties';
+  $$refSTR{'NWData'}          = 'Network whois data';
+  $$refSTR{'getGeoIP'}        = 'Get GeoIP data';
   $$refSTR{'ISPAdded'}        = 'The entry has been added to database.';
   $$refSTR{'ISPModified'}     = 'The entry has been modified in database.';
-  # Network Whois Data Window
-  $$refSTR{'winNWD'}          = 'Network Whois Data';
+  $$refSTR{'rangeNotFound'}   = 'No match for the selected range.';
+  $$refSTR{'ModifyIt'}        = 'Do you want to modify it ?';
+  $$refSTR{'ISPDiff'}         = 'ISP name has changed. Click on save button to modify the entry in database.';
+  $$refSTR{'NonPublicAddr'}   = 'Not a public IP address.';
   # Filter window
   $$refSTR{'winFilter'}       = 'Filters';
   $$refSTR{'lblAddFilterOp'}  = 'Add Filter Operator:';
   $$refSTR{'lblFilterField'}  = 'Field';
   $$refSTR{'cbFilterField1'}  = 'StartIP';
   $$refSTR{'cbFilterField2'}  = 'EndIP';
-  $$refSTR{'cbFilterField4'}  = 'Country';
   $$refSTR{'lblOperator'}     = 'Operator:';
   $$refSTR{'lblFilterValue'}  = 'Value:' ;
   $$refSTR{'btnApplyFilter'}  = 'Apply Filters';
@@ -290,8 +329,35 @@ sub loadDefaultStr
   $$refSTR{'request'}           = 'Request';
   $$refSTR{'details'}           = 'Details';
   $$refSTR{'comment'}           = 'Comment';
+  $$refSTR{'openReport'}        = 'Open report';
   $$refSTR{'deletingEntries'}   = 'Deleting entries...';
   $$refSTR{'selectLogFile'}     = 'Select the log file:';
+  # Report
+  $$refSTR{'NetRange'}          = 'Net Range';
+  $$refSTR{'Handle'}            = 'Handle';
+  $$refSTR{'ParentHandle'}      = 'Parent Handle';
+  $$refSTR{'Name'}              = 'Name';
+  $$refSTR{'NicbAutnum'}        = 'Nicbr autnum';
+  $$refSTR{'Remark'}            = 'Remark';
+  $$refSTR{'Notice'}            = 'Notice';
+  $$refSTR{'Entities'}          = 'Entities';
+  $$refSTR{'Role'}              = 'Role';
+  $$refSTR{'Status'}            = 'Status';
+  $$refSTR{'Status'}            = 'Status';
+  $$refSTR{'Address'}           = 'Address';
+  $$refSTR{'Phone'}             = 'Phone';
+  $$refSTR{'Link'}              = 'Link';
+  $$refSTR{'Continent'}         = 'Continent';
+  $$refSTR{'countryCode'}       = 'Country (code)';
+  $$refSTR{'Country'}           = 'Country';
+  $$refSTR{'regionCode'}        = 'Region (code)';
+  $$refSTR{'Region'}            = 'Region';
+  $$refSTR{'City'}              = 'City';
+  $$refSTR{'postalCode'}        = 'Postal code';
+  $$refSTR{'gpsLat'}            = 'GPS Latitude';
+  $$refSTR{'gpsLong'}           = 'GPS Longitude';
+  $$refSTR{'tzName'}            = 'Timezone';
+  $$refSTR{'tzOffset'}          = 'Timezone (offset)';
   # Simple Progress window
   $$refSTR{'winPb'}           = 'Progress';
   # About Window
