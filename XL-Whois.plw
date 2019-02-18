@@ -11,8 +11,8 @@
 # SourceForge   : https://sourceforge.net/p/xl-whois
 # GitHub        : https://github.com/arioux/XL-Whois
 # Creation      : 2015-09-30
-# Modified      : 2019-02-17
-my $VERSION     = "5.0";
+# Modified      : 2019-02-18
+my $VERSION     = "5.0.1";
 # Author        : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2019  Alain Rioux (le-tools.com)
@@ -67,6 +67,7 @@ use REST::Client;
 use XML::MyXML qw(tidy_xml xml_to_object);
 use GeoIP2::Database::Reader;
 use Archive::Tar;
+use Try::Tiny;
 require "XL-WhoisGraph.pl";
 require "XL-WhoisLang.pl";
 
@@ -7021,7 +7022,7 @@ sub getRanges
       };
       # Thread 'die' signal handler
       $SIG{__DIE__} = sub {
-        return if $_ and $_->isa('GeoIP2::Error');
+        return if $_[0] and ($_[0]->isa('GeoIP2::Error::Generic') or $_[0]->isa('GeoIP2::Error::IPAddressNotFound'));
         my $errMsg = (split(/ at /,$_[0]))[0];
         chomp($errMsg);
         $errMsg =~ s/[\t\r\n]/ /g;
@@ -8227,7 +8228,7 @@ sub btnWhois_Click
         };
         # Thread 'die' signal handler
         $SIG{__DIE__} = sub {
-          return if $_ and $_->isa('GeoIP2::Error');
+          return if $_[0] and ($_[0]->isa('GeoIP2::Error::Generic') or $_[0]->isa('GeoIP2::Error::IPAddressNotFound'));
           my $errMsg = (split(/ at /,$_[0]))[0];
           chomp($errMsg);
           $errMsg =~ s/[\t\r\n]/ /g;
@@ -8841,35 +8842,27 @@ sub getGeoIPData
   # Local variables
   my ($item, $ip, $i, $refResponse, $geoIPDB) = @_;
   my $lang = $winConfig->cbGeoIPLang->GetString($winConfig->cbGeoIPLang->GetCurSel());
-  # Exclude private ranges
-  if (ip_in_range($ip, ['0.0.0.0/8', '10.0.0.0/8', '100.64.0.0/10', '100.64.0.0/10', '127.0.0.0/8', '169.254.0.0/16',
-                        '172.16.0.0/12', '192.0.0.0/24', '192.0.2.0/24', '192.88.99.0/24', '192.168.0.0/16', '198.18.0.0/15',
-                        '198.51.100.0/24', '203.0.113.0/24', '224.0.0.0/4', '224.0.0.0/4', '240.0.0.0/4', '255.255.255.255/32',
-                        '64:ff9b::/96', '100::/64', '2001::/32', '2001:20::/28', '2001:db8::/32', 'fc00::/7', 'fe80::/10', 'ff00::/8']) or
-      $ip =~ /^\:/) {
-    $$refResponse{"geoIP$i"} = $STR{'NonPublicAddr'};
-  } else {
-    $winPb->lblPbCurr->Text("$item: GeoIP -> $ip");
-    if (my $reader = GeoIP2::Database::Reader->new(file => $geoIPDB, locales => [$lang, 'en'])) {
-      my $record;
-      eval { $record = $reader->city(ip => $ip) };
-      if (!$@) {
-        $$refResponse{"geoIP$i"} .= $STR{'Continent'}."\t".$record->continent()->name()."\n"      if $record->continent()->name();
-        $$refResponse{"geoIP$i"} .= $STR{'countryCode'}."\t".$record->country()->iso_code()."\n"  if $record->country()->iso_code();
-        $$refResponse{"geoIP$i"} .= $STR{'Country'}."\t".$record->country()->name()."\n"          if $record->country()->name();
-        $$refResponse{"geoIP$i"} .= $STR{'regionCode'}."\t".$record->most_specific_subdivision->iso_code()."\n" if $record->most_specific_subdivision->iso_code();
-        $$refResponse{"geoIP$i"} .= $STR{'Region'}."\t".$record->most_specific_subdivision->name()."\n"         if $record->most_specific_subdivision->name();
-        $$refResponse{"geoIP$i"} .= $STR{'City'}."\t".$record->city()->name()."\n"              if $record->city()->name();
-        $$refResponse{"geoIP$i"} .= $STR{'postalCode'}."\t".$record->postal()->code()."\n"      if $record->postal()->code();
-        $$refResponse{"geoIP$i"} .= $STR{'gpsLat'}."\t".$record->location()->latitude()."\n"    if $record->location()->latitude();
-        $$refResponse{"geoIP$i"} .= $STR{'gpsLong'}."\t".$record->location()->longitude()."\n"  if $record->location()->longitude();
-        if ($record->location()->time_zone()) {
-          $$refResponse{"geoIP$i"} .= $STR{'tzName'}."\t".$record->location()->time_zone()."\n";
-        }
-        $$refResponse{"geoIP$i"} = unidecode($$refResponse{"geoIP$i"});
-      } else { $$refResponse{"geoIP$i"} = $STR{'notFound'}; }
-    } else { $$refResponse{"geoIP$i"} = $STR{'errGeoIPResolve'}; }
-  }
+  $winPb->lblPbCurr->Text("$item: GeoIP -> $ip");
+  if (my $reader = GeoIP2::Database::Reader->new(file => $geoIPDB, locales => [$lang, 'en'])) {
+    my $record;
+    try   { $record = $reader->city(ip => $ip) }
+    catch { $$refResponse{"geoIP$i"} = $_[0]->message if $_[0]->message; };
+    if ($record) {
+      $$refResponse{"geoIP$i"} .= $STR{'Continent'}."\t".$record->continent()->name()."\n"      if $record->continent()->name();
+      $$refResponse{"geoIP$i"} .= $STR{'countryCode'}."\t".$record->country()->iso_code()."\n"  if $record->country()->iso_code();
+      $$refResponse{"geoIP$i"} .= $STR{'Country'}."\t".$record->country()->name()."\n"          if $record->country()->name();
+      $$refResponse{"geoIP$i"} .= $STR{'regionCode'}."\t".$record->most_specific_subdivision->iso_code()."\n" if $record->most_specific_subdivision->iso_code();
+      $$refResponse{"geoIP$i"} .= $STR{'Region'}."\t".$record->most_specific_subdivision->name()."\n"         if $record->most_specific_subdivision->name();
+      $$refResponse{"geoIP$i"} .= $STR{'City'}."\t".$record->city()->name()."\n"              if $record->city()->name();
+      $$refResponse{"geoIP$i"} .= $STR{'postalCode'}."\t".$record->postal()->code()."\n"      if $record->postal()->code();
+      $$refResponse{"geoIP$i"} .= $STR{'gpsLat'}."\t".$record->location()->latitude()."\n"    if $record->location()->latitude();
+      $$refResponse{"geoIP$i"} .= $STR{'gpsLong'}."\t".$record->location()->longitude()."\n"  if $record->location()->longitude();
+      if ($record->location()->time_zone()) {
+        $$refResponse{"geoIP$i"} .= $STR{'tzName'}."\t".$record->location()->time_zone()."\n";
+      }
+      $$refResponse{"geoIP$i"} = unidecode($$refResponse{"geoIP$i"});
+    } elsif (!exists($$refResponse{"geoIP$i"})) { $$refResponse{"geoIP$i"} = $STR{'notFound'}; }
+  } else { $$refResponse{"geoIP$i"} = $STR{'errGeoIPResolve'}; }
   
 }  #--- End getGeoIPData
 
@@ -9162,7 +9155,9 @@ sub writeReport
         $html .= '<tr><td id="tdHeader" colspan=2>'.$$refAnswer{"ip$k"}.'</td></tr>' . "\n";
         foreach my $line (@geoIPlines) {
           my ($name, $value) = split(/\t/, $line);
-          $html .= "<tr><td>$name</td><td>$value</td></tr>\n";
+          $html .= "<tr><td>$name</td><td>";
+          $html .= $value if $value;
+          $html .= "</td></tr>\n";
         }
         $k++;
       }
