@@ -7,7 +7,7 @@
 # SourceForge     : https://sourceforge.net/p/xl-whois
 # GitHub          : https://github.com/arioux/XL-Whois
 # Creation        : 2015-09-30
-# Modified        : 2019-02-17
+# Modified        : 2019-06-09
 # Author          : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2019  Alain Rioux (le-tools.com)
@@ -235,6 +235,7 @@ sub loadDefaultStr
   $$refSTR{'Selected'}            = 'Selected';
   $$refSTR{'NotSelected'}         = 'Not selected';
   $$refSTR{'showProperties'}      = 'Properties...';
+  $$refSTR{'FindInLogDB'}         = 'Find in Logging database';
   $$refSTR{'getAllRanges'}        = 'Get all related ranges';
   $$refSTR{'gridSelectAll'}       = 'Select All';
   $$refSTR{'lineCopy'}            = 'Copy lines';
