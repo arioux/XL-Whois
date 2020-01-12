@@ -11,11 +11,11 @@
 # SourceForge   : https://sourceforge.net/p/xl-whois
 # GitHub        : https://github.com/arioux/XL-Whois
 # Creation      : 2015-09-30
-# Modified      : 2019-06-09
-my $VERSION     = "5.1";
+# Modified      : 2020-01-12
+my $VERSION     = "5.1.1";
 # Author        : Alain Rioux (admin@le-tools.com)
 #
-# Copyright (C) 2015-2019  Alain Rioux (le-tools.com)
+# Copyright (C) 2015-2020  Alain Rioux (le-tools.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -95,7 +95,6 @@ my $IPv4DB_URL  = 'http://www.iana.org/assignments/ipv4-address-space/ipv4-addre
 my $IPv4DB_CSV  = 'http://www.iana.org/assignments/ipv4-address-space/ipv4-address-space.csv';   # URL of the IPv4 Address Space (the csv file)
 my $IPv6DB_URL  = 'http://www.iana.org/assignments/ipv6-unicast-address-assignments/ipv6-unicast-address-assignments.xhtml'; # URL of the IPv6 Address Space (to get modified date)
 my $IPv6DB_CSV  = 'http://www.iana.org/assignments/ipv6-unicast-address-assignments/ipv6-unicast-address-assignments.csv';   # URL of the IPv6 Address Space (the csv file)
-my $GEOIPDB_URL = 'https://geolite.maxmind.com/download/geoip/database/GeoLite2-City.tar.gz';                                # URL of the GeoIP DB
 my $TOTAL_SIZE      :shared = 0;                                               # Total size for download
 my $START = 0;                                                                 # Indicate when program is started
 my $ARROW           :shared;                                                   # Arrow pointer
@@ -926,13 +925,6 @@ $winConfig->AddLabel(       -name        => 'lblGeoIPDBT'           ,
                             -text        => $STR{'GeoIPDB'}.':'     ,
                             -font        => $fontGB                 ,
                             -visible     => 0                       , );
-$winConfig->AddCheckbox(    -name        => 'chGeoIPDBAutoUpt'      ,
-                            -size        => [220, 20]               ,
-                            -pos         => [415,298]               ,
-                            -background  => [255, 255, 255]         ,
-                            -text        => $STR{'chDBAutoUpt'}     ,
-                            -font        => $font10                 ,
-                            -visible     => 0                       , );
 $winConfig->AddTextfield(   -name        => 'tfGeoIPDB'             ,
                             -size        => [412, 22]               ,
                             -pos         => [150,328]               ,
@@ -942,12 +934,6 @@ $winConfig->AddButton(      -name        => 'btnGeoIPDB'            ,
                             -pos         => [565,328]               ,
                             -bitmap      => $fileOpenBmp            ,
                             -tip         => "$STR{'Select'} $STR{'GeoIPDB'} $STR{'file'}",
-                            -visible     => 0                       , );
-$winConfig->AddButton(      -name        => 'btnGeoIPDBUpt'         ,
-                            -size        => [ 22, 22]               ,
-                            -pos         => [588,328]               ,
-                            -bitmap      => $downloadBmp            ,
-                            -tip         => "$STR{'CheckUpdateFor'} $STR{'GeoIPDB'}",
                             -visible     => 0                       , );
 
 #------------------------------------------------------------------------------#
@@ -1767,7 +1753,7 @@ if (-T $CONFIG_FILE) {
   &loadConfig(\%CONFIG);
   # Check update for tool and databases?
   if ($CONFIG{'TOOL_AUTO_UPDATE'}    or $CONFIG{'TLD_DB_AUTO_UPDATE'} or $CONFIG{'WS_DB_AUTO_UPDATE'} or
-      $CONFIG{'IPv4_DB_AUTO_UPDATE'} or $CONFIG{'IPv6_DB_AUTO_UPDATE'} or $CONFIG{'GEOIP_DB_AUTO_UPDATE'}) {
+      $CONFIG{'IPv4_DB_AUTO_UPDATE'} or $CONFIG{'IPv6_DB_AUTO_UPDATE'}) {
     $THR_UPDATE = threads->create(sub { &updateAll(); });
   }
   &isWhoisReady(0);
@@ -5085,7 +5071,7 @@ sub newerISP
   # If no date, consider as older
   return(1) if !(split(/\t/, $response))[5];
   return(0) if !(split(/\t/, $newISP))[5];
-  # Date format 2019-01-01
+  # Date format 2020-01-01
   my ($dateNewISP) = (split(/\t/, $newISP))[5];
   my ($dateOld)    = (split(/\t/, $response))[5];
   # Convert to unixtime
@@ -9611,7 +9597,7 @@ sub btnAbout_Click
                         -pos         => [140, 80]               ,
                         -font        => $font10                 ,
                         -background  => [255, 255, 255]         ,
-                        -text        => '© Copyright 2015-2019 Alain Rioux', );
+                        -text        => '© Copyright 2015-2020 Alain Rioux', );
   $winAbout->Center($win);
   $winAbout->DoModal();
   return(1);
@@ -9679,8 +9665,6 @@ sub updateAll
             'ipv4-address-space.csv')               if $CONFIG{'IPv4_DB_AUTO_UPDATE'};  # Update IPv4 DB?
   &updateDB(0, 'IPv6', $STR{'lblIPv6DB'}, $winConfig->tfIPv6DB->Text(), $IPv6DB_URL, 'iana.org',
             'ipv6-unicast-address-assignments.csv') if $CONFIG{'IPv6_DB_AUTO_UPDATE'};  # Update IPv6 DB?
-  &updateDB(0, 'GeoIP', $STR{'GeoIPDB'}, $winConfig->tfGeoIPDB->Text(), $GEOIPDB_URL, 'Maxmind',
-            'GeoLite2-City.mmdb')                   if $CONFIG{'GEOIP_DB_AUTO_UPDATE'}; # Update GeoIP DB?
   
 }  #--- End updateAll
 
@@ -10077,23 +10061,13 @@ sub firstStart
       # Download GeoIP Database
       $$refWinCW->lblDLGeoIPDB->Show();
       $defaultPath = &findXLTKfile('GeoIPDB');
-      if ($defaultPath and -e $defaultPath and &validGeoIPDB($defaultPath)) { # GeoIP database exists, check if update available
+      if ($defaultPath and -e $defaultPath and &validGeoIPDB($defaultPath)) {
         $winConfig->tfGeoIPDB->Text($defaultPath);
-        $$refWinCW->lblDLGeoIPDB->Text("$STR{'Update'} $STR{'GeoIPDB'}");
-        &updateDB(0, 'GeoIP', $STR{'GeoIPDB'}, $winConfig->tfGeoIPDB->Text(), $GEOIPDB_URL, 'Maxmind', 'GeoLite2-City.mmdb');
         $$refWinCW->lblDLGeoIPDBDone->Show();
       } else {
-        $$refWinCW->lblDLGeoIPDB->Text("$STR{'Download'} $STR{'GeoIPDB'}");
-        ($status, $return) = &downloadDB($refWinCW, 'GeoIP', $STR{'GeoIPDB'}, $dir, $GEOIPDB_URL, 'Maxmind'); # Fix input and output for this function
-        if ($status) { $$refWinCW->lblDLGeoIPDBDone->Show(); } # Success
-        else { # Error
-          $$refWinCW->lblDLGeoIPDBError->Show();
-          Win32::GUI::MessageBox($$refWinCW, $return, $STR{'Error'}, 0x40010);
-        }
+        $$refWinCW->lblDLGeoIPDBError->Show();
+        Win32::GUI::MessageBox($$refWinCW, $return, $STR{'Error'}, 0x40010);
       }
-      $winConfig->chGeoIPDBAutoUpt->Checked(1); # Set auto update for GeoIP Database
-      $CONFIG{'GEOIP_DB_AUTO_UPDATE'} = 1;
-      &saveConfig(\%CONFIG);
       &isWhoisReady(0);
       sleep(1);
       $$refWinCW->Hide(); # Close Configuration Wizard
@@ -10122,6 +10096,8 @@ sub findXLTKfile
       $defPath = "$ENV{'APPDATA'}\\XL-Toolkit\\XL-Parser\\GeoLite2-City.mmdb";
     } elsif (-e "$ENV{'APPDATA'}\\XL-Toolkit\\XL-Tools\\GeoLite2-City.mmdb" ) { # In XL-Tools dir
       $defPath = "$ENV{'APPDATA'}\\XL-Toolkit\\XL-Tools\\GeoLite2-City.mmdb";
+    } elsif (-e "$ENV{'PROGRAMDATA'}\\Maxmind\\GeoIPUpdate\\GeoIP\\GeoLite2-City.mmdb" ) { # Default Maxmind GeoIP dir
+      $defPath = "$ENV{'PROGRAMDATA'}\\Maxmind\\GeoIPUpdate\\GeoIP\\GeoLite2-City.mmdb";
     }
     return($defPath) if $defPath;
   }
@@ -10225,10 +10201,8 @@ sub configTab_Click
     $winConfig->btnIPv6DBUpt->Hide();
     $winConfig->lblGeoIPDBShadowT->Hide();
     $winConfig->lblGeoIPDBT->Hide();
-    $winConfig->chGeoIPDBAutoUpt->Hide();
     $winConfig->tfGeoIPDB->Hide();
     $winConfig->btnGeoIPDB->Hide();
-    $winConfig->btnGeoIPDBUpt->Hide();
   # Show Storage tab
   } elsif ($winConfig->configTab->SelectedItem() == 1) {
     # General tab
@@ -10318,10 +10292,8 @@ sub configTab_Click
     $winConfig->btnIPv6DBUpt->Hide();
     $winConfig->lblGeoIPDBShadowT->Hide();
     $winConfig->lblGeoIPDBT->Hide();
-    $winConfig->chGeoIPDBAutoUpt->Hide();
     $winConfig->tfGeoIPDB->Hide();
     $winConfig->btnGeoIPDB->Hide();
-    $winConfig->btnGeoIPDBUpt->Hide();
   # Show Databases tab
   } elsif ($winConfig->configTab->SelectedItem() == 2) {
     # General tab
@@ -10411,10 +10383,8 @@ sub configTab_Click
     $winConfig->btnIPv6DBUpt->Show();
     $winConfig->lblGeoIPDBShadowT->Show();
     $winConfig->lblGeoIPDBT->Show();
-    $winConfig->chGeoIPDBAutoUpt->Show();
     $winConfig->tfGeoIPDB->Show();
     $winConfig->btnGeoIPDB->Show();
-    $winConfig->btnGeoIPDBUpt->Show();
   }
 
 }  #--- End configTab_Click
@@ -11652,22 +11622,6 @@ sub btnIPv6DBUpt_Click
   
 }  #--- End btnIPv6DBUpt_Click
 
-
-#--------------------------#
-sub chGeoIPDBAutoUpt_Click
-#--------------------------#
-{
-  # Save the choice
-  if ($winConfig->chGeoIPDBAutoUpt->Checked() == 1) {
-    $CONFIG{'GEOIP_DB_AUTO_UPDATE'} = 1;
-    &saveConfig(\%CONFIG);
-  } else {
-    $CONFIG{'GEOIP_DB_AUTO_UPDATE'} = 0;
-    &saveConfig(\%CONFIG);
-  }
-
-}  #--- End chGeoIPDBAutoUpt_Click
-
 #--------------------------#
 sub tfGeoIPDB_Change
 #--------------------------#
@@ -11726,15 +11680,6 @@ sub btnGeoIPDB_Click
 }  #--- End btnGeoIPDB_Click
 
 #--------------------------#
-sub btnGeoIPDBUpt_Click
-#--------------------------#
-{
-  threads->create(sub { &updateDB(1, 'GeoIP', $STR{'GeoIPDB'}, $winConfig->tfGeoIPDB->Text(), $GEOIPDB_URL, 'Maxmind', 'GeoLite2-City.mmdb'); });
-  return(1);
-  
-}  #--- End btnGeoIPDBUpt_Click
-
-#--------------------------#
 sub validGeoIPDB
 #--------------------------#
 {
@@ -11757,15 +11702,10 @@ sub updateDB
   # Local variables
 	my ($confirm, $db, $dbStr, $localFile, $url, $site, $filename) = @_;
   # if $confirm == 1, show message
-  # $db: IPv4, IPv6, GeoIP, WS, TLD
+  # $db: IPv4, IPv6, WS, TLD
   my $head_only = 1;
   $head_only    = 0 if $db eq 'WS';
-	if (!$localFile and $db eq 'GeoIP' and $localFile = &findXLTKfile('GeoIPDB')) {
-		$winConfig->tfGeoIPDB->Text($localFile);
-		$CONFIG{'GEOIP_DB_FILE'} = $localFile;
-		&saveConfig($CONFIG_FILE);
-	}
-  $localFile = "$USERDIR\\$filename" if !$localFile;  # Default location
+  $localFile    = "$USERDIR\\$filename" if !$localFile;  # Default location
   # Check if update available or necessary
   my $winH = $win;
   $winH    = $winConfig if $confirm;
@@ -11802,11 +11742,8 @@ sub updateDB
           $CONFIG{'IPv6_DB_FILE'} = $localFile;
           &saveConfig(\%CONFIG);
         }
-      } elsif ($db eq 'GeoIP' or $db eq 'WS' or $db eq 'TLD') {
-        if      ($db eq 'GeoIP') {
-          if ($localFile) { $localFile =~ s/\\[^\\]+$//; }
-          else            { $localFile = $USERDIR;       }
-        } elsif ($db eq 'WS') { $url = $WSDB_URL; }
+      } elsif ($db eq 'WS' or $db eq 'TLD') {
+        if ($db eq 'WS') { $url = $WSDB_URL; }
         ($status, $msg)  = &downloadDB(\$winH, $db, $dbStr, $localFile, $url, $site);
       }
       if ($status) {
@@ -11923,37 +11860,6 @@ sub downloadDB
             $CONFIG{'WS_DB_FILE'} = $localFile;
           } else { $errorMsg = "$STR{'errDownloading'} $dbStr..."; }
         } else { $errorMsg = "$STR{'errorMsg'}: $STR{'errCreating'} $localFile"; }
-      # Uncompress GeoIP downloaded file
-      } elsif ($db eq 'GeoIP') {
-        my $GeoIPGZIP = $localFile . '\GeoLite2-City.tar.gz';
-        if (open(GEOIPGZ,">$GeoIPGZIP")) {
-          binmode(GEOIPGZ);
-          print GEOIPGZ $downloadData;
-          close(GEOIPGZ);
-          # Uncompress GEOIP GZIP
-          $TOTAL_SIZE = 0;
-          my $tar   = Archive::Tar->new($GeoIPGZIP);
-          my @files = $tar->list_files;
-          my $db_file;
-          foreach my $file (@files) {
-            if ($file =~ /mmdb/) {
-              $db_file = (split(/\//, $file))[-1];
-              $tar->extract_file($file, "$localFile\\$db_file");
-            }
-          }
-          # Validate file
-          if (-e "$localFile\\$db_file" and &validGeoIPDB("$localFile\\$db_file")) {
-            unlink($GeoIPGZIP);
-            my $lastModifDate = $response->header('last-modified');
-            if ($lastModifDate and my ($y, $m, $d) = parse_date($lastModifDate)) { # Parse date
-              my $dateUpt = sprintf("%4d-%02d-%02d", $y, $m, $d);
-              utime(time, str2time($dateUpt), "$localFile\\$db_file"); # Change the last modified date of the db file
-            }
-            $winConfig->tfGeoIPDB->Text("$localFile\\$db_file");
-            $CONFIG{'GEOIP_DB_FILE'} = "$localFile\\$db_file";
-            &saveConfig(\%CONFIG);
-          } else { $errorMsg = "$STR{'errorMsg'}: $STR{'errNoValidFile'}"; }
-        } else { $errorMsg = "$STR{'errorMsg'}: $STR{'errCreating'} $GeoIPGZIP"; }
       }
       $downloadData = undef;
       if (!$errorMsg) {
@@ -12185,10 +12091,15 @@ sub loadConfig
     $trayMenu->{'geoip'}->Enabled(1);
     $win->chGeoIP->Enable();
   } else {
-    $trayMenu->{'geoip'}->Enabled(0);
-    $win->chGeoIP->Disable();
+		# Verify if database exists in a default directory
+    my $defaultPath = &findXLTKfile('GeoIPDB');
+    if (-f $defaultPath and &validGeoIPDB($defaultPath)) {
+			$$refConfig{'GEOIP_DB_FILE'} = $defaultPath;
+      $winConfig->tfGeoIPDB->Text($defaultPath);
+    } else {
+      $trayMenu->{'geoip'}->Enabled(0);
+      $win->chGeoIP->Disable();
+    }
   }
-  if (exists($$refConfig{'GEOIP_DB_AUTO_UPDATE'})) { $winConfig->chGeoIPDBAutoUpt->Checked($$refConfig{'GEOIP_DB_AUTO_UPDATE'}); }
-  else                                             { $winConfig->chGeoIPDBAutoUpt->Checked(1);                                   } # Default is checked
 
 }  #--- End loadConfig
